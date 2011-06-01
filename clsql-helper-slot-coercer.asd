@@ -9,7 +9,10 @@
 
 (defsystem :clsql-helper-slot-coercer
   :description "A library providing a single overwritde of (setf slot-value-using-class)
-   so that obvious type coercions occur when setting slots on clsql:standard-db-objects"
+   so that obvious type coercions occur when setting slots on clsql:standard-db-objects
+
+   USE CAUTION, LOADING SYSTEM WILL CHANGE THE SEMANTICS OF CLSQL:VIEW-CLASS
+   (slightly, and probably in a good way)"
   :licence "BSD"
   :version "0.1"
   :components ((:file "set-slot-value-using-class"))

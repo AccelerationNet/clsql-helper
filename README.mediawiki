@@ -1,0 +1,16 @@
+= CLSQL-Helper = 
+
+A library providing a clutch of utilities to make working with clsql easier
+particularly in the department of dates
+
+* single interface functions that make a best effort to read/write a date in (m)any formats
+* simplified sql-expression interface
+** clsql-or(s), clsql-and(s) and clsql-exp which make building where expressions simpler
+* simplified query 
+* clsql-mop help, find the primary keys of an object and query / test equality with these
+* A basic sql pretty printer, so that the code printed from
+* log-database-query , which uses the clsql printer and allows easily recording queries 
+executing on a given connection
+* coersion to/from clsql data types an value
+ 
+

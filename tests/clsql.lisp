@@ -1,6 +1,5 @@
-(unless (find-package :clsql-helper-test)
-  (defpackage :clsql-helper-test
-    (:use :cl :clsql-helper :lisp-unit :iter)))
+(defpackage :clsql-helper-test
+  (:use :cl :clsql-helper :lisp-unit :iter))
 
 (in-package :clsql-helper-test)
 (cl-interpol:enable-interpol-syntax)

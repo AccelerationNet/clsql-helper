@@ -18,6 +18,20 @@
   :components ((:file "set-slot-value-using-class"))
   :depends-on (:clsql-helper :closer-mop))
 
+(defsystem :clsql-helper-slot-coercer-test
+  :description "Tests for a library providing a clutch of utilities to make
+     working with clsql easier"
+  :licence "BSD"
+  :version "0.1"
+  :components ((:module :tests
+			:serial t
+			:components ((:file "set-slot-value-using-class"))))
+  :depends-on (:clsql-helper-slot-coercer :lisp-unit))
+
+(defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper-slot-coercer))))
+  (asdf:test-system :clsql-helper-test)
+  (asdf:load-system :clsql-helper-slot-coercer-test))
+
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 
 ;; Permission is hereby granted, free of charge, to any person obtaining

@@ -1,9 +1,9 @@
 = CLSQL-Helper = 
 
 A library providing a clutch of utilities to make working with clsql easier
-particularly in the department of dates
 
 * single interface functions that make a best effort to read/write a date in (m)any formats
+** convert-to-clsql-date(time) and 
 * simplified sql-expression interface
 ** clsql-or(s), clsql-and(s) and clsql-exp which make building where expressions simpler
 * simplified query 

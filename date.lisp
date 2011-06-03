@@ -21,8 +21,10 @@
    #:db-eql #:new-object-p #:save-failed
    #:pretty-print-sql
    #:coerce-value-to-db-type #:format-value-for-database
-   #:coerce-to-clsql-table-name
    #:log-database-command
+
+   #:table-name-exp #:column-name-exp
+   #:table-name-string #:column-name-string
    ))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

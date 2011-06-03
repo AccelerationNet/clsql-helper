@@ -3,6 +3,7 @@
 
 (in-package :clsql-helper-test)
 (cl-interpol:enable-interpol-syntax)
+(clsql-sys:file-enable-sql-reader-syntax)
 
 (define-test test-clsql-parse-and-print
   (let ((dates
@@ -48,5 +49,106 @@
       (assert-equal c-date sdate d)
       (assert-equal c-iso-time iso-time d)
       (assert-equal c-iso-date iso-date d))))
+
+(define-test test-expression-building
+  (assert-false (clsql-ands ()))
+  (assert-false (clsql-and () () ()))
+  (assert-false (clsql-and))
+  (assert-false (clsql-ors ()))
+  (assert-false (clsql-or () () ()))
+  (assert-false (clsql-or))
+
+  ;; verify that expression collapsing is doing its thing
+  ;; and that strings turn correctly into expressions
+  (let* ((exp [= [a] [b]])
+         (str (clsql:sql exp))
+         (and-str (clsql:sql [and exp exp exp]))
+         (or-str (clsql:sql [or exp exp exp])))
+    (assert-equal str (clsql:sql (clsql-and () () () () exp)))
+    (assert-equal
+        and-str (clsql:sql (clsql-and () () () ()
+                                   exp () ()
+                                   exp
+                                   str () ())))
+    (assert-equal
+        or-str (clsql:sql (clsql-or () () () ()
+                                      exp () ()
+                                      exp
+                                      str() ())))))
+
+(define-test test-db-string
+  (assert-equal "'a sql ''string'' quoting test'"
+      (db-string "a sql 'string' quoting test")))
+
+(clsql-sys:def-view-class pkey-test-1 ()
+    ((name :column "first_name" :accessor name
+           :db-constraints nil :initform nil :type clsql-sys:varchar
+           :initarg :name)
+     (id :column "ID" :accessor id :db-kind :key :db-constraints
+         (:not-null :identity) :type integer :initarg :id)))
+
+(clsql-sys:def-view-class pkey-test-2 ()
+    ((name :column "first_name" :accessor name :db-kind :key
+           :db-constraints nil :initform nil :type clsql-sys:varchar
+           :initarg :name)
+     (id :accessor id :db-kind :key :db-constraints
+         (:not-null) :type integer :initarg :id)))
+
+(clsql-sys:def-view-class pkey-test-3 ()
+    ((name :column "first_name" :accessor name
+           :db-constraints nil :initform nil :type clsql-sys:varchar
+           :initarg :name)
+     (id :accessor id :db-kind :key :db-constraints
+         (:not-null) :type integer :initarg :id))
+ (:default-initargs :VIEW-TABLE "MyTable"))
+
+(define-test test-pkey-stuff
+  (assert-equal
+      '(id)
+      (primary-key-slot-names (make-instance 'pkey-test-1)))
+  (assert-equal
+      '(id)
+      (primary-key-slot-names (find-class 'pkey-test-1)))
+  (assert-equal
+      '(id)
+      (primary-key-slot-names 'pkey-test-1))
+
+  (assert-equal
+      '(name id)
+      (primary-key-slot-names (make-instance 'pkey-test-2)))
+  (assert-equal
+      '(name id)
+      (primary-key-slot-names (find-class 'pkey-test-2)))
+  (assert-equal
+      '(name id)
+      (primary-key-slot-names 'pkey-test-2))
+
+  (let ((pk1 (make-instance 'pkey-test-1 :name "russ" :id 1))
+        (pk2 (make-instance 'pkey-test-2 :name "samael" :id 2)))
+    (assert-equal "(ID = 1)"
+        (clsql:sql (primary-key-where-clauses pk1)))
+    (assert-equal "((first_name = 'samael') AND (id = 2))"
+        (clsql:sql (primary-key-where-clauses pk2)))
+    ))
+
+(define-test test-db-eql
+  (let ((pk1 (make-instance 'pkey-test-1 :name "russ" :id 1))
+        (pk1.2 (make-instance 'pkey-test-1 :name "Bobby" :id 1))
+        (pk1.3 (make-instance 'pkey-test-1 :name "Bobby" :id 2))
+        (pk2 (make-instance 'pkey-test-2 :name "samael" :id 2))
+        (pk2.2 (make-instance 'pkey-test-2 :name "samael" :id 2)))
+    (assert-true (db-eql pk1 pk1))
+    (assert-true (db-eql pk1.2 pk1))
+    (assert-true (db-eql pk2 pk2.2))
+    (assert-false (db-eql pk1 pk1.3))
+    (assert-false (db-eql pk2 pk1))))
+
+(define-test table-and-column-expressions
+  (assert-equal "foo" (column-name-string "foo"))
+  (assert-equal "foo" (column-name-string 'foo))
+  (assert-equal "\"foo\"" (table-name-string "foo"))
+  (assert-equal "foo" (table-name-string 'foo))
+  )
+
 
 (run-tests)

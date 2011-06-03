@@ -1,4 +1,4 @@
-(in-package :net.acceleration.utils)
+(in-package :clsql-helper)
 (cl-interpol:enable-interpol-syntax)
 
 (defvar *clsql-pg-codebase-loaded* T)
@@ -61,8 +61,8 @@ curval(sequence) to fill it. If > 1 key-slot, this won't do anything."
 (defun copy-table ( table-from table-to )
   "Makes a copy of a table to a new table in the same database.
      NB:  Not a very quick way to copy tables"
-  (setf table-from (coerce-to-clsql-table-name table-from)
-	table-to (coerce-to-clsql-table-name table-to))
+  (setf table-from (clsql-sys:sql (table-name-exp table-from))
+	table-to (clsql-sys:sql (table-name-exp table-to)))
   (clsql-sys:execute-command #?"CREATE TABLE ${table-to} (like ${table-from} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES);")
   (clsql-sys:execute-command #?"INSERT INTO ${table-to} (SELECT * FROM ${table-from});"))
 (export 'copy-table)

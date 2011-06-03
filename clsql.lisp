@@ -26,7 +26,7 @@
   (let ((ex (%clsql-subclauses clauses)))
     (when ex
       (case (length ex)
-        (1 ex)
+        (1 (first ex))
         (t (apply #'clsql-sys:sql-and ex))))))
 
 (defun clsql-and (&rest clauses)
@@ -38,21 +38,53 @@
   (let ((ex (%clsql-subclauses clauses)))
     (when ex
       (case (length ex)
-        (1 ex)
+        (1 (first ex))
         (t (apply #'clsql-sys:sql-or ex))))))
 
 (defun clsql-or (&rest clauses)
   "returns a CLSQL:SQL-AND for all non-nil clauses, no nil if there are no non-nil clauses"
   (clsql-ors clauses))
 
+(defun table-name-exp ( table-name )
+  "based on what is passed in, tries to figure out what the table name is"
+  (labels
+      ((rec (table &key from-class from-symbol &aux cls)
+         (typecase table
+           (symbol
+            (cond
+              ((and (not from-class) (setf cls (ignore-errors (find-class table))))
+               (rec cls))
+              (T (rec (symbol-munger:lisp->underscores table :capitalize nil)
+                      :from-symbol T))))
+           (clsql-sys::standard-db-class
+            (rec (or (clsql-sys::view-table table) (class-name table))
+                 :from-class T))
+           (clsql-sys::standard-db-object (rec (class-of table)))
+           (string (if from-symbol
+                       (make-instance 'clsql-sys:sql-ident :name table)
+                       (make-instance 'clsql-sys:sql-ident-table :name table))))
+         ))
+    (rec table-name)
+    ))
+
+(defun table-name-string ( table-name )
+  (clsql-sys:sql (table-name-exp table-name)))
+
+(defun column-name-exp (column)
+  (typecase column
+    (symbol (column-name-exp (symbol-munger:lisp->underscores column)))
+    (string (make-instance 'clsql-sys:sql-ident :name column ))
+    (clsql-sys::view-class-slot-definition-mixin
+     (column-name-exp (or (clsql-sys::view-class-slot-column column)
+                          (c2mop:slot-definition-name column))))
+    (t column)))
+
+(defun column-name-string (column)
+  (clsql-sys:sql (column-name-exp column)))
+
 (defmethod by-col (class column colvalue)
   "fetchs the first row for the given class by id"
-  (setf column (typecase column
-                  (symbol (make-instance 'clsql-sys:sql-ident
-                                         :name (symbol-munger:lisp->underscores
-                                                column)))
-                  (string (make-instance 'clsql-sys:sql-ident :name column ))
-                  (t column)))
+  (setf column (column-name-exp column))
   (first (clsql:select class
 	   :where [= column colvalue]
 	   :flatp T)))
@@ -63,28 +95,32 @@
     "direct implementation of by-id, (select class). fetchs the first row for the given class by id"
     (by-col class colname id)))
 
+(defun primary-key-slots (obj)
+  (clsql-sys::key-slots
+   (typecase obj
+     (symbol (find-class obj))
+     (clsql-sys::standard-db-class obj)
+     (clsql-sys:standard-db-object (class-of obj)))))
+
 (defun primary-key-slot-names (obj)
   (mapcar #'c2mop:slot-definition-name
-	  (clsql-sys::key-slots
-           (typecase obj
-             (symbol (find-class obj))
-             (clsql-sys::standard-db-class obj)
-             (clsql-sys:standard-db-object (class-of obj))))))
+          (primary-key-slots obj)))
 
 (defun primary-key-where-clauses ( obj )
   "Generates a where clause based on all of the primary keys of the object
     ex: pk1 = val1 and pk2 = val2 ...
   "
-  (let ((keys (primary-key-slot-names obj)))
-    (values (clsql-ands
-             (iter (for key in keys)
-               (for kfn = (handler-case (fdefinition key)
-                            (undefined-function ())))
-               (for kfn-v = (and (compute-applicable-methods kfn (list obj))
-                                 (funcall kfn obj)))
-               (for v = (or kfn-v (slot-value obj key)))
-               (collecting [= key v])))
-	    keys)))
+  (iter (for slot in (primary-key-slots obj))
+    (for key = (c2mop:slot-definition-name slot))
+    (for col = (column-name-exp slot))
+    (for kfn = (handler-case (fdefinition key)
+                 (undefined-function ())))
+    (for kfn-v = (and (compute-applicable-methods kfn (list obj))
+                      (funcall kfn obj)))
+    (for v = (or kfn-v (slot-value obj key)))
+    (collecting [= (column-name-exp col) v] into exprs)
+    (collecting key into keys)
+    (finally (return (values (clsql-ands exprs) keys)))))
 
 (defmethod new-object-p (obj)
   "Checks that primary keys have values and that the object
@@ -173,18 +209,6 @@
 		 (setf ,record (pretty-print-sql ,record))
 		 (,log-fn-name ,record))))
        ,results)))
-
-(defun coerce-to-clsql-table-name (table)
-  "based on what is passed in, tries to figure out what the table name is"
-  (let ((cls (ignore-errors (find-class table))))
-  (typecase table
-    (symbol (if cls
-                (clsql-sys::view-table cls)
-                (symbol-munger:lisp->underscores table :capitalize nil)))
-    (clsql-sys::standard-db-class (clsql-sys::view-table table))
-    (clsql-sys::standard-db-object
-       (class-of (clsql-sys::view-table table)) )
-    (string table))))
 
 (defun coerce-value-to-db-type (val db-type)
   (cond

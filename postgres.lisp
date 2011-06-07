@@ -10,8 +10,9 @@
 
 (defmethod set-through-accessor ((obj pg-db-obj) name value)
   (call-next-method)
-  (let ((slot-def (class-slot-by-name (class-of obj) name)))
-    (when-bind db-info (clsql-sys::view-class-slot-db-info slot-def)
+  (let* ((slot-def (class-slot-by-name (class-of obj) name))
+        (db-info (clsql-sys::view-class-slot-db-info slot-def)))
+    (when db-info
       (let ((hk (gethash :home-key db-info))
 	    (fk (gethash :foreign-key db-info))
 	    (cls (gethash :join-class db-info)))

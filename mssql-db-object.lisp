@@ -60,25 +60,25 @@
     ((obj clsql:mssql-db-object) slots &key clsql-sys:database)
   "After effecting the database record, if the key-slot is empty then use
 SCOPE_IDENTITY to fill it. If > 1 key-slot, this won't do anything."
-  (arnesi:when-bind key-slots
-      (clsql-sys::key-slots (class-of obj))
-    (if (= 1 (length key-slots))
-	   (let ((key-slot-name (sb-mop:slot-definition-name
-				    (first key-slots))))
-	     (unless (and
-			 (slot-boundp obj key-slot-name)
-			 (slot-value obj key-slot-name))
-	       (setf (slot-value obj key-slot-name)
-		     (let ((new-id (car (clsql-sys:query
-					   "SELECT SCOPE_IDENTITY()"
-					   :flatp t
-					   :database
-					   (clsql-sys::choose-database-for-instance
-					    obj
-					    clsql-sys:database)))))
-		       (typecase new-id
-			 (number new-id)
-			 (string (parse-integer new-id :junk-allowed T))))))))))
+  (arnesi:when-bind
+   key-slots
+   (clsql-sys::key-slots (class-of obj))
+   (when (= 1 (length key-slots))
+     (let ((key-slot-name (sb-mop:slot-definition-name
+                           (first key-slots))))
+       (unless (and (slot-boundp obj key-slot-name)
+                    (slot-value obj key-slot-name))
+         (setf (slot-value obj key-slot-name)
+               (let ((new-id (first
+                              (clsql-sys:query
+                               "SELECT SCOPE_IDENTITY()"
+                               :flatp t
+                               :database
+                               (clsql-sys::choose-database-for-instance
+                                obj clsql-sys:database)))))
+                 (typecase new-id
+                   (number new-id)
+                   (string (parse-integer new-id :junk-allowed T))))))))))
 
 (defmethod clsql-sys:update-record-from-slots
     ((o clsql:mssql-db-view) slots &key &allow-other-keys)

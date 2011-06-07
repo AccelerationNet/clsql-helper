@@ -70,7 +70,7 @@
 (defun table-name-string ( table-name )
   (clsql-sys:sql (table-name-exp table-name)))
 
-(defun column-name-exp (column)
+(defun column-name-exp ( column )
   (typecase column
     (symbol (column-name-exp (symbol-munger:lisp->underscores column)))
     (string (make-instance 'clsql-sys:sql-ident :name column ))
@@ -240,7 +240,7 @@
   "prints a correctly sql escaped value for postgres"
   (etypecase d
     (null (format stream "null"))
-    (string (format stream "'~a'" (clsql-sys:sql-escape-quotes d)))
+    (string (format stream "~a" (db-string d)))
     (integer (format stream "~D" d))
     (float (format stream "~F" d))
     (clsql-sys:date (format stream "'~a'" (iso8601-datestamp d)))

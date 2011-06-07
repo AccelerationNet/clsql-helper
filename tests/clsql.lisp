@@ -151,4 +151,36 @@
   )
 
 
+#+clsql-sqlite3
+(progn
+ (defparameter +test-db+
+   (princ-to-string
+    (asdf:system-relative-pathname :clsql-helper "tests/test.sqlite3")))
+
+ (defmacro with-test-db (()&body body)
+   `(clsql-sys:with-database
+     (clsql-sys:*default-database*
+      (list +test-db+) :database-type :sqlite3)
+     ,@body))
+
+ (defvar *log* t)
+ (defun sql-log (str &rest args)
+   (apply #'format *log* str args))
+
+ (define-test log-test
+   (assert-true
+       (search
+        "
+ SELECT id, name
+   FROM test
+   WHERE ID=1"
+        (with-output-to-string (*log*)
+          (with-test-db ()
+            (log-database-command (sql-log)
+              (clsql:query "SELECT id, name FROM test WHERE ID=1"))))
+        :test #'string-equal))
+   ))
+
+
+
 (run-tests)

@@ -31,6 +31,10 @@
   (when (find-package :local-time)
     (pushnew :local-time *features*)))
 
+;; Put clsql into the features list so that we can
+;; conditionally compile things based on this
+(pushnew :clsql *features*)
+
 (in-package :clsql-helper)
 (cl-interpol:enable-interpol-syntax)
 (clsql:file-enable-sql-reader-syntax)

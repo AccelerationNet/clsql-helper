@@ -49,6 +49,12 @@
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper))))
   (asdf:load-system :clsql-helper-test)
+
+  ;; this is just so we can test stuff that requires a db connection
+  ;; not really a big deal if it fails, we will just skip a couple of tests
+  (when (ignore-errors (asdf:load-system :clsql-sqlite3))
+    (pushnew :clsql-sqlite3 *features*))
+
   (let ((*package* (find-package :clsql-helper-test)))
     (eval (read-from-string "(run-tests)"))))
 

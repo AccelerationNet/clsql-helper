@@ -2,6 +2,9 @@
 (cl-interpol:enable-interpol-syntax)
 (clsql:file-enable-sql-reader-syntax)
 
+(define-condition save-failed (error)
+  ((message :initarg :message :accessor message)))
+
 (defun clsql-get-val (sql)
   (first (clsql:query sql :flatp T)))
 

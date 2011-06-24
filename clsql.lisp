@@ -2,6 +2,9 @@
 (cl-interpol:enable-interpol-syntax)
 (clsql:file-enable-sql-reader-syntax)
 
+(defun clsql-get-val (sql)
+  (first (clsql:query sql :flatp T)))
+
 (defun clsql-exp (s)
   (clsql-sys:sql-expression :string s))
 

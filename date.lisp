@@ -14,7 +14,8 @@
    #:iso8601-timestamp
 
    ;; rest
-   #:clsql-exp #:db-string #:clsql-ands #:clsql-and
+   #:clsql-get-val #:clsql-exp #:db-string
+   #:clsql-ands #:clsql-and
    #:clsql-ors #:clsql-or
    #:by-id #:by-col
    #:primary-key-slot-names #:primary-key-where-clauses

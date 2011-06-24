@@ -125,9 +125,9 @@
 
   (let ((pk1 (make-instance 'pkey-test-1 :name "russ" :id 1))
         (pk2 (make-instance 'pkey-test-2 :name "samael" :id 2)))
-    (assert-equal "(ID = 1)"
+    (assert-equal "(\"ID\" = 1)"
         (clsql:sql (primary-key-where-clauses pk1)))
-    (assert-equal "((first_name = 'samael') AND (id = 2))"
+    (assert-equal "((\"first_name\" = 'samael') AND (ID = 2))"
         (clsql:sql (primary-key-where-clauses pk2)))
     ))
 
@@ -144,10 +144,10 @@
     (assert-false (db-eql pk2 pk1))))
 
 (define-test table-and-column-expressions
-  (assert-equal "foo" (column-name-string "foo"))
-  (assert-equal "foo" (column-name-string 'foo))
+  (assert-equal "\"foo\"" (column-name-string "foo"))
+  (assert-equal "FOO" (column-name-string 'foo))
   (assert-equal "\"foo\"" (table-name-string "foo"))
-  (assert-equal "foo" (table-name-string 'foo))
+  (assert-equal "FOO" (table-name-string 'foo))
   )
 
 

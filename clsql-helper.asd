@@ -16,27 +16,6 @@
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria))
 
-#+ASDF-SYSTEM-CONNECTIONS
-(asdf:defsystem-connection adwcodebase-clsql-postgres-connection
-  :description "the part of adwcode base dedicated to postgresql"
-  :requires (:adwcodebase :clsql-postgresql-socket :cl-ppcre)
-  :components ((:module :src
-                 :components ((:file "postgres")))))
-
-#+ASDF-SYSTEM-CONNECTIONS
-(asdf:defsystem-connection adwcodebase-clsql-postgres3-connection
-  :description "the part of adwcode base dedicated to postgresql"
-  :requires (:adwcodebase :clsql-postgresql-socket3 :cl-ppcre)
-  :components ((:module :src
-                 :components ((:file "postgres")))))
-
-#+ASDF-SYSTEM-CONNECTIONS
-(asdf:defsystem-connection adwcodebase-clsql-odbc-connection
-  :description "the part of adwcode base dedicated to postgresql"
-  :requires (:adwcodebase :clsql-odbc )
-  :components ((:module :src
-                 :components ((:file "mssql-db-object")))))
-
 (defsystem :clsql-helper-test
   :description "Tests for a library providing a clutch of utilities to make
      working with clsql easier"

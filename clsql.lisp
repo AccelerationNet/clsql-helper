@@ -71,32 +71,30 @@
     ))
 
 (defun table-name-string ( table-name )
-  (clsql-sys:sql (table-name-exp table-name)))
-
-(defun column-name-exp ( column )
-  (typecase column
-    (symbol (column-name-exp (symbol-munger:lisp->underscores column)))
-    (string (make-instance 'clsql-sys:sql-ident :name column ))
-    (clsql-sys::view-class-slot-definition-mixin
-     (column-name-exp (or (clsql-sys::view-class-slot-column column)
-                          (c2mop:slot-definition-name column))))
-    (t column)))
+  (clsql-sys::escaped-database-identifier
+   table-name clsql-sys:*default-database* T))
 
 (defun column-name-string (column)
-  (clsql-sys:sql (column-name-exp column)))
-
-(defmethod by-col (class column colvalue)
-  "fetchs the first row for the given class by id"
-  (setf column (column-name-exp column))
-  (first (clsql:select class
-	   :where [= column colvalue]
-	   :flatp T)))
+  (clsql-sys::escaped-database-identifier
+   column clsql-sys:*default-database*))
 
 (defgeneric by-id (class id &optional colname)
   (:documentation "Fetchs the first row for the given class by id")
   (:method (class id &optional (colname [id]))
     "direct implementation of by-id, (select class). fetchs the first row for the given class by id"
     (by-col class colname id)))
+
+(defmethod by-col (class column colvalue)
+  "fetchs the first row for the given class by id"
+  (setf column (typecase column
+                  (symbol (make-instance 'clsql-sys:sql-ident
+                                         :name (symbol-munger:lisp->underscores
+                                                column)))
+                  (string (make-instance 'clsql-sys:sql-ident :name column ))
+                  (t column)))
+  (first (clsql:select class
+	   :where [= column colvalue]
+	   :flatp T)))
 
 (defun primary-key-slots (obj)
   (clsql-sys::key-slots
@@ -115,13 +113,13 @@
   "
   (iter (for slot in (primary-key-slots obj))
     (for key = (c2mop:slot-definition-name slot))
-    (for col = (column-name-exp slot))
+    (for col = (clsql-sys::database-identifier slot))
     (for kfn = (handler-case (fdefinition key)
                  (undefined-function ())))
     (for kfn-v = (and (compute-applicable-methods kfn (list obj))
                       (funcall kfn obj)))
     (for v = (or kfn-v (slot-value obj key)))
-    (collecting [= (column-name-exp col) v] into exprs)
+    (collecting [= col v] into exprs)
     (collecting key into keys)
     (finally (return (values (clsql-ands exprs) keys)))))
 

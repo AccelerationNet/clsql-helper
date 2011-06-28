@@ -7,6 +7,10 @@
 
 (in-package clsql-helper.system)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (when (find-system 'asdf-system-connections nil)
+    (asdf:operate 'asdf:load-op 'asdf-system-connections)))
+
 (defsystem :clsql-helper
   :description "A library providing a clutch of utilities to make working with clsql easier"
   :licence "BSD"
@@ -15,6 +19,11 @@
                (:file "clsql"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria))
+
+(asdf:defsystem-connection clsql-helper-local-time
+  :description "the part of adwcode base dedicated to postgresql"
+  :requires (:clsql-helper :local-time)
+  :components ((:file "local-time")))
 
 (defsystem :clsql-helper-test
   :description "Tests for a library providing a clutch of utilities to make

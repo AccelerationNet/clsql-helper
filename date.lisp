@@ -28,10 +28,6 @@
    #:table-name-string #:column-name-string
    ))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (when (find-package :local-time)
-    (pushnew :local-time *features*)))
-
 ;; Put clsql into the features list so that we can
 ;; conditionally compile things based on this
 (pushnew :clsql *features*)
@@ -112,8 +108,6 @@
        (third (multiple-value-list (clsql-sys:time-ymd d))))
     ((or string integer)
      (date-day (convert-to-clsql-datetime d)))
-    #+local-time
-    (local-time:timestamp (local-time:timestamp-day d))
     (null nil)
     ))
 
@@ -123,8 +117,6 @@
     (clsql-sys:wall-time (clsql-sys:time-ymd d))
     ((or string integer)
      (date-year (convert-to-clsql-datetime d)))
-    #+local-time
-    (local-time:timestamp (local-time:timestamp-year d))
     (null nil)))
 
 (defmethod date-month (d)
@@ -135,8 +127,6 @@
      (second (multiple-value-list (clsql-sys:time-ymd d))))
     ((or string integer)
      (date-month (convert-to-clsql-datetime d)))
-    #+local-time
-    (local-time:timestamp (local-time:timestamp-month d))
     (null nil)))
 
 (defun month-string  (d)
@@ -203,8 +193,7 @@
      is fine
    "
   (typecase d
-    ((or clsql-sys:wall-time clsql-sys:date string integer
-         #+local-time local-time:timestamp)
+    ((or clsql-sys:wall-time clsql-sys:date string integer)
      (multiple-value-bind (usec second minute hour day month year)
          (clsql-sys:decode-time (convert-to-clsql-datetime d))
        ;; oh yeah, we love recursive format processing
@@ -240,7 +229,7 @@
 (defparameter +iso-8601-ish-regex+
   (cl-ppcre:create-scanner +iso-8601-ish-regex-string+ :case-insensitive-mode t))
 
-(defun convert-to-clsql-datetime (val )
+(defmethod convert-to-clsql-datetime (val )
   "Converts a string timestamp into a clsql date time object
    Makes every possible effort to understand your date that will invariably be in some format it wont understand."
   (macrolet ((regex-date-to-clsql-date ()
@@ -261,8 +250,6 @@
       (clsql:date (clsql-sys::date->time val))
       (clsql:wall-time val)
       (integer (clsql-sys::utime->time val))
-      #+local-time
-      (local-time:timestamp (local-time->clsql-datetime val))
       (string
 	 (or ; as best I can tell these just suck
              ;(ignore-errors (clsql-sys:parse-date-time val))
@@ -275,30 +262,12 @@
 	       (regex-date-to-clsql-date)
 	       ))))))
 
-(defun convert-to-clsql-date (val)
+(defmethod convert-to-clsql-date (val)
   (typecase val
     (null nil)
     (clsql:date val)
     (clsql-sys::wall-time (clsql-sys::time->date val))
     (t (convert-to-clsql-date (convert-to-clsql-datetime val)))))
-
-#+local-time
-(defun clsql-date/times->local-time (obj)
-  "obj is either a wall-time or a date"
-  (apply #'local-time:encode-timestamp
-	 ;;we dont want day of week
-         (multiple-value-bind (usec second minute hour day month year)
-             (clsql-sys:decode-time (convert-to-clsql-datetime obj))
-           (list (* 1000 usec) second minute hour day month year ))))
-
-#+local-time
-(defun local-time->clsql-datetime (obj)
-  "obj is either a wall-time or a date"
-  (apply #'clsql-sys:make-time
-	 ;;we dont want day of week
-         (multiple-value-bind (nsec second minute hour day month year)
-             (clsql-sys:decode-time (convert-to-clsql-datetime obj))
-           (list year month day hour minute second (floor (/ 1000 nsec))))))
 
 (defun clsql-date/times->utime (obj)
   "obj is either a wall-time or a date

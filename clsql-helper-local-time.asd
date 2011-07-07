@@ -7,35 +7,12 @@
 
 (in-package clsql-helper.system)
 
-(defsystem :clsql-helper
+(defsystem :clsql-helper-local-time
   :description "A library providing a clutch of utilities to make working with clsql easier"
   :licence "BSD"
   :version "0.1"
-  :components ((:file "date")
-               (:file "clsql"))
-  :depends-on (:iterate :clsql :closer-mop :cl-ppcre
-                :cl-interpol :symbol-munger :alexandria))
-
-(defsystem :clsql-helper-test
-  :description "Tests for a library providing a clutch of utilities to make
-     working with clsql easier"
-  :licence "BSD"
-  :version "0.1"
-  :components ((:module :tests
-			:serial t
-			:components ((:file "clsql"))))
-  :depends-on (:clsql-helper :lisp-unit))
-
-(defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper))))
-  (asdf:load-system :clsql-helper-test)
-
-  ;; this is just so we can test stuff that requires a db connection
-  ;; not really a big deal if it fails, we will just skip a couple of tests
-  (when (ignore-errors (asdf:load-system :clsql-sqlite3))
-    (pushnew :clsql-sqlite3 *features*))
-
-  (let ((*package* (find-package :clsql-helper-test)))
-    (eval (read-from-string "(run-tests)"))))
+  :components ((:file "local-time"))
+  :depends-on (:clsql-helper :local-time))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 

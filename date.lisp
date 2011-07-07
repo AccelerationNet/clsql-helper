@@ -26,6 +26,7 @@
 
    #:table-name-exp #:column-name-exp
    #:table-name-string #:column-name-string
+   #:db-type-from-lisp-type
    ))
 
 ;; Put clsql into the features list so that we can

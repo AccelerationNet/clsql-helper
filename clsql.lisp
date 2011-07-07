@@ -214,6 +214,34 @@
 		 (,log-fn-name ,record))))
        ,results)))
 
+(defun db-type-from-lisp-type (type &optional (length 64) (scale 4))
+  (declare (ignore scale));; maybe later?
+  (let ((backend (and clsql-sys:*default-database*
+                      (clsql-sys::database-underlying-type clsql-sys:*default-database*))))
+    (cond
+      ((or (subtypep type 'ratio)
+           (subtypep type 'float))
+       (case backend
+         (:postgresql "double precision")
+         (T "double")))
+      ((subtypep type 'integer)
+       (case backend
+         (:postgresql "int4")
+         (T "int")))
+      ((subtypep type 'string)
+       (case backend
+         (:postgresql "string")
+         (T #?"varchar (${ length })")))
+      ((subtypep type 'clsql-sys:wall-time)
+       (ecase backend
+         (:postgresql "timestamp without time zone")
+         (:mssql "datetime")))
+      ((subtypep type 'clsql-sys:date)
+       (ecase backend
+         (:postgresql "date")
+         (:mssql "smalldatetime")))
+      )))
+
 (defun coerce-value-to-db-type (val db-type)
   (cond
     ((subtypep db-type 'clsql-sys:varchar)

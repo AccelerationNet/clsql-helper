@@ -6,16 +6,15 @@ A library providing a clutch of utilities to make working with clsql easier
   * convert-to-clsql-date(time) and 
  * simplified sql-expression interface
   * clsql-or(s), clsql-and(s) and clsql-exp which make building where expressions easier
- * simplified query 
  * clsql-mop help, find the primary keys of an object and query / test equality with these
  * A basic sql pretty printer, so that the code printed from
- * log-database-query , which uses the clsql printer and allows easily recording queries 
-   executing on a given connection
+   log-database-query , which uses the clsql printer and allows easily
+   recording queries executing on a given connection
  * coersion to/from clsql data types an value
  
 ## Future
 
- * My company [http://www.acceleration.net Acceleration.net] is a
+ * My company [Acceleration.net](http://www.acceleration.net) is a
    significant contributer to clsql so I hope that some of these
    changes can be moved upstream eventually
 

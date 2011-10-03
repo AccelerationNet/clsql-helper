@@ -230,7 +230,7 @@
          (T "int")))
       ((subtypep type 'string)
        (case backend
-         (:postgresql "string")
+         (:postgresql "text")
          (T #?"varchar (${ length })")))
       ((subtypep type 'clsql-sys:wall-time)
        (ecase backend

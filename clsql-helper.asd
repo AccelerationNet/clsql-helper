@@ -11,6 +11,7 @@
   :description "A library providing a clutch of utilities to make working with clsql easier"
   :licence "BSD"
   :version "0.1"
+  :serial T
   :components ((:file "date")
                (:file "clsql"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre

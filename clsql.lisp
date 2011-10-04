@@ -214,8 +214,9 @@
 		 (,log-fn-name ,record))))
        ,results)))
 
-(defun db-type-from-lisp-type (type &optional (length 64) (scale 4))
-  (declare (ignore scale));; maybe later?
+(defun db-type-from-lisp-type (type &key (length 64) (scale 4)
+                                    (pg-default-int-type "int8"))
+  (declare (ignore scale)) ;; maybe later?
   (let ((backend (and clsql-sys:*default-database*
                       (clsql-sys::database-underlying-type clsql-sys:*default-database*))))
     (cond
@@ -224,9 +225,9 @@
        (case backend
          (:postgresql "double precision")
          (T "double")))
-      ((subtypep type 'integer)
+      ((or (subtypep type 'fixnum) (subtypep type 'integer))
        (case backend
-         (:postgresql "int4")
+         (:postgresql pg-default-int-type)
          (T "int")))
       ((subtypep type 'string)
        (case backend
@@ -272,7 +273,10 @@
   "prints a correctly sql escaped value for postgres"
   (etypecase d
     (null (format stream "null"))
-    (string (format stream "~a" (db-string d)))
+    (string
+     (let ((r (db-string d)))
+       (if r (format stream "~A" r)
+           (format stream "null"))))
     (integer (format stream "~D" d))
     (float (format stream "~F" d))
     (clsql-sys:date (format stream "'~a'" (iso8601-datestamp d)))

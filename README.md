@@ -18,6 +18,13 @@ A library providing a clutch of utilities to make working with clsql easier
    significant contributer to clsql so I hope that some of these
    changes can be moved upstream eventually
 
+
+## Authors
+ * [Acceleration.net](http://www.acceleration.net/) - [Donate](http://www.acceleration.net/programming/donate-to-acceleration-net/)
+  * [Russ Tyndall](http://russ.unwashedmeme.com/blog)
+  * [Nathan Bird](http://the.unwashedmeme.com/blog)
+  * [Ryan Davis](http://ryepup.unwashedmeme.com/blog)
+
 ```
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 ;; All rights reserved.

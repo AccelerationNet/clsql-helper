@@ -13,7 +13,8 @@
   :version "0.1"
   :serial T
   :components ((:file "date")
-               (:file "clsql"))
+               (:file "clsql")
+               (:file "connections"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria))
 

@@ -31,6 +31,7 @@
    ;;connection functions
    #:with-database-function
    #:with-database
+   #:with-a-database
    ))
 
 ;; Put clsql into the features list so that we can

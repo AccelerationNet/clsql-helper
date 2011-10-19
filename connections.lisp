@@ -41,3 +41,12 @@ connect-settings: a plist of connection info for clsql, also supports :post-conn
 
 post-connect-fn: a function of no arguments to run after opening the connection "
   `(with-database-function #'(lambda () ,@body) ,connection-settings ,post-connect-fn))
+
+(defmacro with-a-database ((connection-settings &optional post-connect-fn) &body body)
+  "If a database connection exists, use it!, otherwise aquire a new database connection"
+  (alexandria:with-unique-names (db-fn)
+    `(flet ((,db-fn () ,@body))
+       (if clsql-sys:*default-database*
+	   (,db-fn)
+	   (with-database-function
+	       #',db-fn ,connection-settings ,post-connect-fn)))))

@@ -224,6 +224,7 @@
            (subtypep type 'float))
        (case backend
          (:postgresql "double precision")
+         (:mssql "decimal")
          (T "double")))
       ((or (subtypep type 'fixnum) (subtypep type 'integer))
        (case backend

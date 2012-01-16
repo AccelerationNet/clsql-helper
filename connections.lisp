@@ -46,7 +46,12 @@ post-connect-fn: a function of no arguments to run after opening the connection 
   "If a database connection exists, use it!, otherwise aquire a new database connection"
   (alexandria:with-unique-names (db-fn)
     `(flet ((,db-fn () ,@body))
-       (if clsql-sys:*default-database*
-	   (,db-fn)
-	   (with-database-function
-	       #',db-fn ,connection-settings ,post-connect-fn)))))
+      ;; if we've got an open connection with the same spec, reuse it
+      (if (and clsql-sys:*default-database*
+               (null
+                (set-difference (first ,connection-settings)
+                                (clsql-sys:connection-spec clsql-sys:*default-database*)
+                                :test #'string-equal)))
+          (,db-fn)
+          (with-database-function
+              #',db-fn ,connection-settings ,post-connect-fn)))))

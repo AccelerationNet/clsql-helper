@@ -32,6 +32,10 @@
    #:with-database-function
    #:with-database
    #:with-a-database
+
+   ;;migration functions
+   #:*migration-table-name*
+   #:migrations
    ))
 
 ;; Put clsql into the features list so that we can

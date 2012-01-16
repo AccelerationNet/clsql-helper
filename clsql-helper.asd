@@ -14,9 +14,11 @@
   :serial T
   :components ((:file "date")
                (:file "clsql")
-               (:file "connections"))
+               (:file "connections")
+               (:file "migrations"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
-                :cl-interpol :symbol-munger :alexandria))
+                :cl-interpol :symbol-munger :alexandria
+                :md5))
 
 (defsystem :clsql-helper-test
   :description "Tests for a library providing a clutch of utilities to make

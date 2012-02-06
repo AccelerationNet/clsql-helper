@@ -17,6 +17,7 @@
    #:clsql-get-val #:clsql-exp #:db-string
    #:clsql-ands #:clsql-and
    #:clsql-ors #:clsql-or
+   #:clsql-column-name
    #:by-id #:by-col
    #:primary-key-slot-names #:primary-key-where-clauses
    #:db-eql #:new-object-p #:save-failed

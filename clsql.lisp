@@ -11,6 +11,10 @@
 (defun clsql-exp (s)
   (clsql-sys:sql-expression :string s))
 
+(defun clsql-column-name (column &optional table)
+  (make-instance 'clsql-sys:sql-ident-attribute
+                 :name column :qualifier table))
+
 (defun db-string (s)
   "escapes and wraps in single quotes so that the string is ready
    to be spliced into a query (eg: with cl-interpol)"

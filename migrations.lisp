@@ -23,11 +23,12 @@
 
 (defun migrate (sql-statement &aux (hash (sql-hash sql-statement)))
   (unless (migration-done-p hash)
+    (with-simple-restart (continue "Ignore error, consider this migration done.")
+      (clsql-sys:execute-command sql-statement))
     (clsql-sys:insert-records
      :into *migration-table-name*
      :attributes (list [hash] [query] [date-entered])
-     :values (list hash sql-statement (clsql-helper:current-sql-time)))
-    (clsql-sys:execute-command sql-statement)))
+     :values (list hash sql-statement (clsql-helper:current-sql-time)))))
 
 (defun migrations (&rest sql-statements)
   (unless clsql-sys:*default-database* (error "must have a database connection open."))

@@ -33,4 +33,4 @@
 (defun migrations (&rest sql-statements)
   (unless clsql-sys:*default-database* (error "must have a database connection open."))
   (ensure-migration-table)
-  (mapc #'migrate sql-statements))
+  (mapc #'migrate (alexandria:flatten sql-statements)))

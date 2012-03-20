@@ -142,6 +142,12 @@
 		:flatp T
 		:where (primary-key-where-clauses obj))))))
 
+(defmethod db-object-key-slots ((c clsql-sys::standard-db-class))
+  (clsql-sys::key-slots c))
+
+(defmethod db-object-key-slots ((o clsql-sys:standard-db-object))
+  (db-object-key-slots (class-of o)))
+
 (defmethod db-eql (x y &key (test #'equalp))
   "Tries to determine if the objects are of the same type and have the same primary key values
       Many times objects which pass new-objectp are db-eql ,but once saved are no longer db-eql (due to using serial pkey)"
@@ -149,15 +155,21 @@
       (and
        (eql (class-of x) (class-of y))
        ;; make sure all the keys have the same values
-       (iter (for key-def in (clsql-sys::key-slots (class-of x)))
-	     (for key = (c2mop:slot-definition-name key-def))
-	     (for s1 = (slot-boundp x key))
-	     (for s2 = (slot-boundp y key))
-	     ;;true when either both slots are unbound or both slots have the same value
-	     (always (or (not (or s1 s2))
-			 (and s1 s2
-			      (funcall test (slot-value x key)
-				       (slot-value y key)))))))))
+       (let ((keys (db-obj-key-slots x)))
+         (unless keys
+           (error "DB-EQL requires that there be at least one key, otherwise all database objects are eql.
+Keyless object: ~A - ~A
+You can define db-obj-key-slots for the object to assign keys for the purpose of db-eql"
+                  x (class-of x)))
+         (iter (for key-def in keys)
+           (for key = (c2mop:slot-definition-name key-def))
+           (for s1 = (slot-boundp x key))
+           (for s2 = (slot-boundp y key))
+           ;;true when either both slots are unbound or both slots have the same value
+           (always (or (not (or s1 s2))
+                       (and s1 s2
+                            (funcall test (slot-value x key)
+                                     (slot-value y key))))))))))
 
 (defun pretty-print-sql (sql-command)
   (when (and sql-command (stringp sql-command))

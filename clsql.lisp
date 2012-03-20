@@ -15,14 +15,14 @@
   (make-instance 'clsql-sys:sql-ident-attribute
                  :name column :qualifier table))
 
-(defun db-string (s)
+(defun db-string (s &key (prefix "")(postfix "")(wrapper "") )
   "escapes and wraps in single quotes so that the string is ready
    to be spliced into a query (eg: with cl-interpol)"
   (let ((it (trim-and-nullify (typecase s
                                 (string s)
                                 (t (princ-to-string s))))))
     (when it
-      #?"'${(clsql-sys:sql-escape-quotes it)}'")))
+      #?"'${prefix}${wrapper}${(clsql-sys:sql-escape-quotes it)}${wrapper}${postfix}'")))
 
 (defun %clsql-subclauses (clauses)
   (iter (for c in clauses)

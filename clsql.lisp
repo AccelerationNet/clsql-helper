@@ -16,8 +16,8 @@
                  :name column :qualifier table))
 
 (defun db-string (s &key (prefix "")(postfix "")(wrapper "") )
-  "escapes and wraps in single quotes so that the string is ready
-   to be spliced into a query (eg: with cl-interpol)"
+  "trims, nullifies, escapes and wraps in single quotes so that the string is ready
+   to be spliced into a query (eg: with cl-interpol). returns 'foo' or NIL."
   (let ((it (trim-and-nullify (typecase s
                                 (string s)
                                 (t (princ-to-string s))))))

@@ -280,8 +280,10 @@
     (clsql-sys::wall-time (clsql-sys::time->date val))
     (t (convert-to-clsql-date (convert-to-clsql-datetime val)))))
 
-(defun clsql-date/times->utime (obj)
-  "obj is either a wall-time or a date
+(defun clsql-date/times->utime (obj &optional (timezone 0))
+  "obj is either a wall-time or a date in local time. Converts to UTC and returns a utime.
+
+  pass timezone nil to skip UTC conversion.
 
    if you are looking for the other it is clsql-sys:utime->time
   "
@@ -289,4 +291,4 @@
          (multiple-value-bind (usec second minute hour day month year)
              (clsql-sys:decode-time (convert-to-clsql-datetime obj))
            (declare (ignore usec))
-           (list second minute hour day month year 0))))
+           (list second minute hour day month year timezone))))

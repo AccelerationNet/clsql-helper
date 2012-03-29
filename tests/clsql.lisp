@@ -183,8 +183,18 @@
 
 (define-test clsql-date/times->utime
   (let ((utime 3542038020))
-    (assert-eql utime (clsql-helper:clsql-date/times->utime
-		       (clsql-sys:utime->time utime))
-		"clsql-date/times->utime is altering the time")))
+    (multiple-value-bind (sec min hr date month year day daylight-savings-p zone)
+			  (decode-universal-time utime)
+	(declare (ignore sec min hr date month year day))
+	;; converts from local-time to UTC
+	(assert-eql utime
+		    (+
+		     ;; calculate offset between local time and UTC
+		     (* 60 60 (- zone (if daylight-savings-p 1 0)))
+		     (clsql-helper:clsql-date/times->utime
+		      (clsql-sys:utime->time utime))))
+      ;; use the default timezone from encode-universal-time
+      (assert-eql utime (clsql-helper:clsql-date/times->utime
+			 (clsql-sys:utime->time utime) nil)))))
 
 (run-tests)

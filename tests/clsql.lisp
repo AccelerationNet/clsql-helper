@@ -181,6 +181,10 @@
         :test #'string-equal))
    ))
 
-
+(define-test clsql-date/times->utime
+  (let ((utime 3542038020))
+    (assert-eql utime (clsql-helper:clsql-date/times->utime
+		       (clsql-sys:utime->time utime))
+		"clsql-date/times->utime is altering the time")))
 
 (run-tests)

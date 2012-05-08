@@ -10,12 +10,17 @@
   "
   (iterate::top-level-check)
   (let* ((dur-var (iterate::make-var-and-default-binding 'dur :type 'clsql-sys:duration))
-         (setqs (iterate::do-dsetq date `(clsql-sys:date+ ,date ,dur-var))))
+         (init-var (iterate::make-var-and-default-binding 'init )))
     (iterate::return-driver-code
      :initial `((setq
                  ,dur-var ,step
+                 ,init-var T
                  ,date (convert-to-clsql-date ,start)))
-     :step (list setqs)
+     ;; this is a hack to ensure that "previous" clauses works, rather than using step
+     :next (list (iterate::do-dsetq date
+                   `(if ,init-var
+                     (progn (setf ,init-var nil) ,date)
+                     (clsql-sys:date+ ,date ,dur-var))))
      :variable date)))
 
 (iterate::defclause-driver
@@ -25,12 +30,16 @@
   "
   (iterate::top-level-check)
   (let* ((dur-var (iterate::make-var-and-default-binding 'dur :type 'clsql-sys:duration))
-         (setqs (iterate::do-dsetq date `(clsql-sys:time+ ,date ,dur-var))))
+         (init-var (iterate::make-var-and-default-binding 'init )))
     (iterate::return-driver-code
      :initial `((setq
                  ,dur-var ,step
+                 ,init-var T
                  ,date (convert-to-clsql-datetime ,start)))
-     :step (list setqs)
+     :next (list (iterate::do-dsetq date
+                   `(if ,init-var
+                     (progn (setf ,init-var nil) ,date)
+                     (clsql-sys:time+ ,date ,dur-var))))
      :variable date)))
 
 (iterate::defclause-driver
@@ -39,15 +48,20 @@
   (iterate::top-level-check)
   (let* ((end-var (iterate::make-var-and-default-binding 'end :type 'clsql-sys:date))
          (dur-var (iterate::make-var-and-default-binding 'dur :type 'clsql-sys:duration))
-         (setqs (iterate::do-dsetq date `(clsql-sys:date+ ,date ,dur-var)))
+         (init-var (iterate::make-var-and-default-binding 'init ))
          (test `(if (and ,end-var (clsql-sys:date>= ,date ,end-var)) (go ,iterate::*loop-end*))))
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
                  ,dur-var ,step
+                 ,init-var T
                  ,date (convert-to-clsql-date ,start)
                  ,end-var (convert-to-clsql-date ,end)))
-     :step (list setqs test)
+     :next (list (iterate::do-dsetq date
+                   `(if ,init-var
+                     (progn (setf ,init-var nil) ,date)
+                     (clsql-sys:date+ ,date ,dur-var)))
+                 test)
      :variable date)))
 
 (iterate::defclause-driver
@@ -56,15 +70,20 @@
   (iterate::top-level-check)
   (let* ((end-var (iterate::make-var-and-default-binding 'end :type 'clsql-sys:wall-time))
          (dur-var (iterate::make-var-and-default-binding 'dur :type 'clsql-sys:duration))
-         (setqs (iterate::do-dsetq date `(clsql-sys:time+ ,date ,dur-var)))
+         (init-var (iterate::make-var-and-default-binding 'init ))
          (test `(if (and ,end-var (clsql-sys:time>= ,date ,end-var)) (go ,iterate::*loop-end*))))
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
                  ,dur-var ,step
+                 ,init-var T
                  ,date (convert-to-clsql-datetime ,start)
                  ,end-var (convert-to-clsql-datetime ,end)))
-     :step (list setqs test)
+     :next (list (iterate::do-dsetq date
+                   `(if ,init-var
+                     (progn (setf ,init-var nil) ,date)
+                     (clsql-sys:time+ ,date ,dur-var)))
+                 test)
      :variable date)))
 
 (iterate::defclause-driver
@@ -73,16 +92,20 @@
   (iterate::top-level-check)
   (let* ((end-var (iterate::make-var-and-default-binding 'end :type 'clsql-sys:date))
          (dur-var (iterate::make-var-and-default-binding 'dur :type 'clsql-sys:duration))
-         (setqs (iterate::do-dsetq date `(clsql-sys:date+ ,date ,dur-var)))
+         (init-var (iterate::make-var-and-default-binding 'init ))
          (test `(if (and ,end-var (clsql-sys:date> ,date ,end-var)) (go ,iterate::*loop-end*))))
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
                  ,dur-var ,step
+                 ,init-var T
                  ,date (convert-to-clsql-date ,start)
                  ,end-var (convert-to-clsql-date ,end)))
-     :next (list test)
-     :step (list setqs)
+     :next (list (iterate::do-dsetq date
+                   `(if ,init-var
+                     (progn (setf ,init-var nil) ,date)
+                     (clsql-sys:date+ ,date ,dur-var)))
+                 test)
      :variable date)))
 
 (iterate::defclause-driver
@@ -91,15 +114,21 @@
   (iterate::top-level-check)
   (let* ((end-var (iterate::make-var-and-default-binding 'end :type 'clsql-sys:wall-time))
          (dur-var (iterate::make-var-and-default-binding 'dur :type 'clsql-sys:duration))
-         (setqs (iterate::do-dsetq date `(clsql-sys:time+ ,date ,dur-var)))
+         (init-var (iterate::make-var-and-default-binding 'init ))
          (test `(if (and ,end-var (clsql-sys:time> ,date ,end-var)) (go ,iterate::*loop-end*))))
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
                  ,dur-var ,step
+                 ,init-var T
                  ,date (convert-to-clsql-datetime ,start)
                  ,end-var (convert-to-clsql-datetime ,end)))
-     :next (list test)
-     :step (list setqs)
+     :next (list (iterate::do-dsetq date
+                   `(if ,init-var
+                     (progn (setf ,init-var nil) ,date)
+                     (clsql-sys:time+ ,date ,dur-var)))
+                 test)
      :variable date)))
+
+
 

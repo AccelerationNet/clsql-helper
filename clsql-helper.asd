@@ -28,7 +28,8 @@
   :version "0.1"
   :components ((:module :tests
 			:serial t
-			:components ((:file "clsql"))))
+			:components ((:file "clsql")
+                                     (:file "iterate-clauses"))))
   :depends-on (:clsql-helper :lisp-unit))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper))))

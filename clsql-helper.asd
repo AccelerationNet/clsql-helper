@@ -15,7 +15,8 @@
   :components ((:file "date")
                (:file "clsql")
                (:file "connections")
-               (:file "migrations"))
+               (:file "migrations")
+               (:file "iterate-clauses"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria
                 :md5))

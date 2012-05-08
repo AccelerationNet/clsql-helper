@@ -155,11 +155,11 @@
       (and
        (eql (class-of x) (class-of y))
        ;; make sure all the keys have the same values
-       (let ((keys (db-obj-key-slots x)))
+       (let ((keys (db-object-key-slots x)))
          (unless keys
            (error "DB-EQL requires that there be at least one key, otherwise all database objects are eql.
 Keyless object: ~A - ~A
-You can define db-obj-key-slots for the object to assign keys for the purpose of db-eql"
+You can define db-object-key-slots for the object to assign keys for the purpose of db-eql"
                   x (class-of x)))
          (iter (for key-def in keys)
            (for key = (c2mop:slot-definition-name key-def))

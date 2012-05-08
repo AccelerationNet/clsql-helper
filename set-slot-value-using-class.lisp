@@ -21,9 +21,10 @@
         ;; should have been an integer, but got a string
         ((and (subtypep spec-type 'integer)
               (typep new 'string))
+         (setf new (trim-and-nullify new))
          (setf (closer-mop:slot-value-using-class
                 class object slot)
-               (parse-integer new)))
+               (when new (parse-integer new))))
 
         ;; should have been an float, but got a string
         ((and (subtypep spec-type 'double-float)

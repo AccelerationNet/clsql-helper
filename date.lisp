@@ -274,8 +274,10 @@
 	       (regex-date-to-clsql-date)
 	       ))))))
 
-(defmacro convert-to-clsql-datetime! (place)
-  `(setf ,place (convert-to-clsql-datetime ,place)))
+(defmacro convert-to-clsql-datetime! (&rest places)
+  `(setf ,@(iter (for p in places)
+             (collect p)
+             (collect `(convert-to-clsql-datetime ,p)))))
 
 (defmethod convert-to-clsql-date (val)
   (typecase val
@@ -284,8 +286,10 @@
     (clsql-sys::wall-time (clsql-sys::time->date val))
     (t (convert-to-clsql-date (convert-to-clsql-datetime val)))))
 
-(defmacro convert-to-clsql-date! (place)
-  `(setf ,place (convert-to-clsql-date ,place)))
+(defmacro convert-to-clsql-date! (&rest places)
+  `(setf ,@(iter (for p in places)
+             (collect p)
+             (collect `(convert-to-clsql-date ,p)))))
 
 (defun clsql-date/times->utime (obj &optional (timezone 0))
   "obj is either a wall-time or a date in local time. Converts to UTC and returns a utime.

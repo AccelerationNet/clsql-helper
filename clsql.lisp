@@ -114,10 +114,19 @@
   (mapcar #'c2mop:slot-definition-name
           (primary-key-slots obj)))
 
-(defun primary-key-where-clauses ( obj )
+(define-condition db-object-has-no-keys (warning)
+  ((obj :accessor obj :initarg :obj :initform nil))
+  (:report (lambda (c s)
+	     (format s "The object ~s has no primary-key-slots"
+                     (obj c)))))
+(defun warn-db-obj-has-no-keys (obj)
+  (warn (make-instance 'db-object-has-no-keys :obj obj)))
+
+(defun primary-key-where-clauses ( obj  &aux (slots (primary-key-slots obj)))
   "Generates a where clause based on all of the primary keys of the object
     ex: pk1 = val1 and pk2 = val2 ...
   "
+  (unless slots (warn-db-obj-has-no-keys obj))
   (iter (for slot in (primary-key-slots obj))
     (for key = (c2mop:slot-definition-name slot))
     (for col = (clsql-sys::database-identifier slot))
@@ -134,13 +143,16 @@
   "Checks that primary keys have values and that the object
    with those primary key values exists in the database"
   (let* ((class (class-of obj))
-	 (keys (mapcar #'c2mop:slot-definition-name
-		       (clsql-sys::key-slots class))))
+	 (keys (primary-key-slot-names obj)))
+    (unless keys
+      (warn-db-obj-has-no-keys obj)
+      (return-from new-object-p nil))
     (not (and (every (lambda (k) (slot-boundp obj k)) keys)
 	      (every (lambda (k) (slot-value obj k)) keys)
 	      (clsql:select 1
                 :from (class-name class)
 		:flatp T
+                :limit 1
 		:where (primary-key-where-clauses obj))))))
 
 (defmethod db-object-key-slots ((c clsql-sys::standard-db-class))

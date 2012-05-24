@@ -138,7 +138,8 @@
 		       (clsql-sys::key-slots class))))
     (not (and (every (lambda (k) (slot-boundp obj k)) keys)
 	      (every (lambda (k) (slot-value obj k)) keys)
-	      (clsql:select (class-name class)
+	      (clsql:select 1
+                :from (class-name class)
 		:flatp T
 		:where (primary-key-where-clauses obj))))))
 

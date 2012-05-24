@@ -27,7 +27,7 @@
                (when new (parse-integer new))))
 
         ;; should have been an float, but got a string
-        ((and (subtypep spec-type 'double-float)
+        ((and (subtypep spec-type '(or number double-float))
               (stringp new))
          (setf (closer-mop:slot-value-using-class
                 class object slot)

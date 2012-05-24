@@ -122,12 +122,15 @@
 (defun warn-db-obj-has-no-keys (obj)
   (warn (make-instance 'db-object-has-no-keys :obj obj)))
 
+(defun error-db-obj-has-no-keys (obj)
+  (error (make-instance 'db-object-has-no-keys :obj obj)))
+
 (defun primary-key-where-clauses ( obj  &aux (slots (primary-key-slots obj)))
   "Generates a where clause based on all of the primary keys of the object
     ex: pk1 = val1 and pk2 = val2 ...
   "
   (unless slots (warn-db-obj-has-no-keys obj))
-  (iter (for slot in (primary-key-slots obj))
+  (iter (for slot in slots)
     (for key = (c2mop:slot-definition-name slot))
     (for col = (clsql-sys::database-identifier slot))
     (for kfn = (handler-case (fdefinition key)
@@ -155,11 +158,12 @@
                 :limit 1
 		:where (primary-key-where-clauses obj))))))
 
-(defmethod db-object-key-slots ((c clsql-sys::standard-db-class))
-  (clsql-sys::key-slots c))
-
-(defmethod db-object-key-slots ((o clsql-sys:standard-db-object))
-  (db-object-key-slots (class-of o)))
+(defmethod db-object-key-slots (o)
+  (typecase o
+    (clsql-sys:standard-db-object
+     (db-object-key-slots (class-of o)))
+    (clsql-sys::standard-db-class
+     (clsql-sys::key-slots o))))
 
 (defmethod db-eql (x y &key (test #'equalp))
   "Tries to determine if the objects are of the same type and have the same primary key values
@@ -168,14 +172,9 @@
       (and
        (eql (class-of x) (class-of y))
        ;; make sure all the keys have the same values
-       (let ((keys (db-object-key-slots x)))
-         (unless keys
-           (error "DB-EQL requires that there be at least one key, otherwise all database objects are eql.
-Keyless object: ~A - ~A
-You can define db-object-key-slots for the object to assign keys for the purpose of db-eql"
-                  x (class-of x)))
-         (iter (for key-def in keys)
-           (for key = (c2mop:slot-definition-name key-def))
+       (let ((keys (primary-key-slot-names x)))
+         (unless keys (error-db-obj-has-no-keys x))
+         (iter (for key in keys)
            (for s1 = (slot-boundp x key))
            (for s2 = (slot-boundp y key))
            ;;true when either both slots are unbound or both slots have the same value

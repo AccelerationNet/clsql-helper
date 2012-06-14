@@ -206,8 +206,7 @@
              (cond
                ((or g1 g2) ;; we got a sql keyword, or subkeyword
                 ;; if we already wrote a new line, we dont need another
-                (let ((newline (if wnl "" #\newline)))
-                  #?"${newline}${ (spaces (if g1 1 3)) }${ (or g1 g2) } "))
+                  #?"\n${ (spaces (if g1 1 3)) }${ (or g1 g2) } ")
                (g3 (incf paren-cnt) g3)  ;; got an open paren
                (g4 ;; close paren
                 (when (> paren-cnt 0) (decf paren-cnt))

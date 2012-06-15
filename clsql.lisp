@@ -15,14 +15,23 @@
   (make-instance 'clsql-sys:sql-ident-attribute
                  :name column :qualifier table))
 
+(defmethod coerce-to-db-string-representation (s)
+  "Convert an object into an unquoted string that the database understands
+
+   mostly used to do the coercion in db-string"
+  (trim-and-nullify
+   (typecase s
+     (string s)
+     (clsql-sys:date (print-nullable-date s))
+     (clsql-sys:wall-time (print-nullable-datetime s))
+     (t (princ-to-string s)))))
+
 (defun db-string (s &key (prefix "")(postfix "")(wrapper "") )
   "trims, nullifies, escapes and wraps in single quotes so that the string is ready
    to be spliced into a query (eg: with cl-interpol). returns 'foo' or NIL."
-  (let ((it (trim-and-nullify (typecase s
-                                (string s)
-                                (t (princ-to-string s))))))
-    (when it
-      #?"'${prefix}${wrapper}${(clsql-sys:sql-escape-quotes it)}${wrapper}${postfix}'")))
+  (let ((s (coerce-to-db-string-representation s)))
+    (when s
+      #?"'${prefix}${wrapper}${(clsql-sys:sql-escape-quotes s)}${wrapper}${postfix}'")))
 
 (defun %clsql-subclauses (clauses)
   (iter (for c in clauses)

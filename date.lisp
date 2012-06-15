@@ -232,11 +232,11 @@
 
 (defparameter +date-time-regex+
   (cl-ppcre:create-scanner
-   #?r"^(\d{1,2})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{2,4})(?:\s*(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?\s*((?:a|p)m\.?)?)?"
+   #?r"^(?:'|\")?(\d{1,2})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{2,4})(?:\s*(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?\s*((?:a|p)m\.?)?)?(?:'|\")?"
    :case-insensitive-mode t))
 
 (defparameter +iso-8601-ish-regex-string+
-  #?r"^(\d{2,4})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{1,2})(?:(?:\s*|T)(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?\s*((?:a|p)m\.?)?(?:Z|,,0|(?:-|\+)\d{1,2}:?\d{2}?)?)?")
+  #?r"^(?:'|\")?(\d{2,4})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{1,2})(?:(?:\s*|T)(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?\s*((?:a|p)m\.?)?(?:Z|,,0|(?:-|\+)\d{1,2}:?\d{2}?)?)?(?:'|\")?")
 
 (defparameter +iso-8601-ish-regex+
   (cl-ppcre:create-scanner +iso-8601-ish-regex-string+ :case-insensitive-mode t))

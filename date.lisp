@@ -13,6 +13,16 @@
    #:clsql-date/times->local-time
    #:iso8601-datestamp
    #:iso8601-timestamp
+   #:first-of-the-month
+   #:last-of-the-month
+   #:first-of-next-month
+   #:next-month
+   #:last-month
+   #:days-in-month
+   #:day-before
+   #:+a-month+
+   #:+a-day+
+   #:date-diff
 
    ;; rest
    #:clsql-get-val #:clsql-exp #:db-string
@@ -303,3 +313,46 @@
              (clsql-sys:decode-time (convert-to-clsql-datetime obj))
            (declare (ignore usec))
            (list second minute hour day month year timezone))))
+
+(defparameter +a-day+ (clsql-sys:make-duration :day 1))
+(defparameter +a-month+ (clsql-sys:make-duration :month 1))
+
+(defun last-of-the-month (start-date &aux (month (clsql-helper:date-month start-date)))
+  "Returns the first of next month eg: 2/14/2012->2/29/2012"
+  (iter
+    (for date from-date start-date)
+    (for yesterday previous date)
+    (while (eql month (clsql-helper:date-month date)))
+    (finally (return yesterday))))
+
+(defun first-of-the-month (&optional (date (clsql-helper:current-sql-date)))
+  (convert-to-clsql-date! date)
+  (clsql-sys:make-date :year (date-year date) :month (date-month date) :day 1))
+
+(defun days-in-month (&optional (date (clsql-helper:current-sql-date)))
+  "Return the number of days in the month of the date passed in"
+  (date-day (last-of-the-month date)))
+
+(defun day-before (&optional (date (clsql-helper:current-sql-date)))
+  (convert-to-clsql-date! date)
+  (when date (clsql:date- date +a-day+)))
+
+(defun next-month (&optional (date (clsql-helper:current-sql-date)))
+  (convert-to-clsql-date! date)
+  (when date (clsql-sys:date+ date +a-month+)))
+
+(defun last-month (&optional (date (clsql-helper:current-sql-date)))
+  (convert-to-clsql-date! date)
+  (when date (clsql-sys:date- date +a-month+)))
+
+(defun first-of-next-month (&optional (date (clsql-helper:current-sql-date)))
+  (convert-to-clsql-date! date)
+  (first-of-the-month (next-month date)))
+
+(defun date-diff (d1 d2)
+  "Gets the difference in days between two dates"
+  (convert-to-clsql-date! d1)
+  (convert-to-clsql-date! d2)
+  ;; date-diff returns only days and seconds (for times)
+  (clsql-sys:duration-day
+   (clsql-sys:date-difference d1 d2)))

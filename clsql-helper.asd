@@ -12,7 +12,8 @@
   :licence "BSD"
   :version "0.1"
   :serial T
-  :components ((:file "iterate-clauses")
+  :components ((:file "package")
+               (:file "iterate-clauses")
                (:file "date")
                (:file "clsql")
                (:file "connections")

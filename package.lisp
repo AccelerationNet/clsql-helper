@@ -20,8 +20,12 @@
    #:last-month
    #:days-in-month
    #:day-before
+   #:+a-second+
+   #:+a-minute+
+   #:+an-hour+
    #:+a-month+
    #:+a-day+
+   #:+a-year+
    #:date-diff
 
    ;; rest

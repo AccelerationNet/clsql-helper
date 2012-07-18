@@ -3,8 +3,19 @@
 ;;;; BEWARE These are largely the same (COPY/PASTA) and I have tried to comment the differences
 ;;;; because of all the macrology I couldnt quite figure out how to abstract it
 
+(defmethod  %coerce-to-step (step)
+  (etypecase step
+    (clsql-sys:duration step)
+    (keyword (ecase step
+               (:second +a-second+)
+               (:minute +a-minute+)
+               (:hour +an-hour+)
+               (:day +a-day+)
+               (:month +a-month+)
+               (:year +a-year+)))))
+
 (iterate::defclause-driver
-    (FOR date FROM-DATE start &optional BY (step '(clsql:make-duration :day 1)) )
+    (FOR date FROM-DATE start &optional BY (step '+a-day+) )
   "iterates through dates from start by step
    HAS NO END CHECK eg an infinite loop unless you prevent it
   "
@@ -13,7 +24,7 @@
          (init-var (iterate::make-var-and-default-binding 'init )))
     (iterate::return-driver-code
      :initial `((setq
-                 ,dur-var ,step
+                 ,dur-var (%coerce-to-step ,step)
                  ,init-var T
                  ,date (convert-to-clsql-date ,start)))
      ;; this is a hack to ensure that "previous" clauses works, rather than using step
@@ -24,7 +35,7 @@
      :variable date)))
 
 (iterate::defclause-driver
-    (FOR date FROM-DATETIME start &optional BY (step '(clsql:make-duration :day 1)) )
+    (FOR date FROM-DATETIME start &optional BY (step '+a-day+) )
   "iterates through dates from start by step
    HAS NO END CHECK eg an infinite loop unless you prevent it
   "
@@ -33,7 +44,7 @@
          (init-var (iterate::make-var-and-default-binding 'init )))
     (iterate::return-driver-code
      :initial `((setq
-                 ,dur-var ,step
+                 ,dur-var (%coerce-to-step ,step)
                  ,init-var T
                  ,date (convert-to-clsql-datetime ,start)))
      :next (list (iterate::do-dsetq date
@@ -43,7 +54,7 @@
      :variable date)))
 
 (iterate::defclause-driver
-    (FOR date FROM-DATE start TO end &optional BY (step '(clsql:make-duration :day 1)) )
+    (FOR date FROM-DATE start TO end &optional BY (step '+a-day+) )
   "iterates through dates from start to end exclusive of end"
   (iterate::top-level-check)
   (let* ((end-var (iterate::make-var-and-default-binding 'end :type 'clsql-sys:date))
@@ -53,7 +64,7 @@
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
-                 ,dur-var ,step
+                 ,dur-var (%coerce-to-step ,step)
                  ,init-var T
                  ,date (convert-to-clsql-date ,start)
                  ,end-var (convert-to-clsql-date ,end)))
@@ -75,7 +86,7 @@
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
-                 ,dur-var ,step
+                 ,dur-var (%coerce-to-step ,step)
                  ,init-var T
                  ,date (convert-to-clsql-datetime ,start)
                  ,end-var (convert-to-clsql-datetime ,end)))
@@ -87,7 +98,7 @@
      :variable date)))
 
 (iterate::defclause-driver
-    (FOR date FROM-DATE start THRU end &optional BY (step '(clsql:make-duration :day 1)) )
+    (FOR date FROM-DATE start THRU end &optional BY (step '+a-day+) )
   "iterates through dates from start to end inclusively"
   (iterate::top-level-check)
   (let* ((end-var (iterate::make-var-and-default-binding 'end :type 'clsql-sys:date))
@@ -97,7 +108,7 @@
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
-                 ,dur-var ,step
+                 ,dur-var (%coerce-to-step ,step)
                  ,init-var T
                  ,date (convert-to-clsql-date ,start)
                  ,end-var (convert-to-clsql-date ,end)))
@@ -109,7 +120,7 @@
      :variable date)))
 
 (iterate::defclause-driver
-    (FOR date FROM-DATETIME start THRU end &optional BY (step '(clsql:make-duration :day 1)) )
+    (FOR date FROM-DATETIME start THRU end &optional BY (step '+a-day+) )
   "iterates through dates from start to end inclusively"
   (iterate::top-level-check)
   (let* ((end-var (iterate::make-var-and-default-binding 'end :type 'clsql-sys:wall-time))
@@ -119,7 +130,7 @@
     (setq iterate::*loop-end-used?* t)
     (iterate::return-driver-code
      :initial `((setq
-                 ,dur-var ,step
+                 ,dur-var (%coerce-to-step ,step)
                  ,init-var T
                  ,date (convert-to-clsql-datetime ,start)
                  ,end-var (convert-to-clsql-datetime ,end)))

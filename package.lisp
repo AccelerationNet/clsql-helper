@@ -40,11 +40,27 @@
    #:coerce-value-to-db-type #:format-value-for-database
    #:log-database-command
 
+   #:db-exec
+   #:db-select
+   #:db-query
+   #:db-scalar
+   #:db-select-scalar
+   #:db-query-plists
+   #:db-objs
+   #:db-objs-select
+   #:make-instance-plist
+   #:make-instances
+   #:make-instances-setting-slot-value
+   #:make-instances-setting-accessors
+   #:make-instances-setting-access
+   #:save!
+
    #:table-name-exp #:column-name-exp
    #:table-name-string #:column-name-string
    #:db-type-from-lisp-type
 
    ;;connection functions
+   #:*connection-settings*
    #:with-database-function
    #:with-database
    #:with-a-database

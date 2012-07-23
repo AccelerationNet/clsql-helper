@@ -5,8 +5,7 @@
 (define-condition save-failed (error)
   ((message :initarg :message :accessor message)))
 
-(defun clsql-get-val (sql)
-  (first (clsql:query sql :flatp T)))
+
 
 (defun clsql-exp (s)
   (clsql-sys:sql-expression :string s))
@@ -227,7 +226,29 @@
                 "" ))))
          :simple-calls T)))))
 
-(defmacro log-database-command ((log-fn-name &optional (database 'clsql:*default-database*)) &body body)
+(defun default-log-fn (msg)
+  (format *trace-output* "~%~A~%" msg))
+
+(defvar *default-log-fn* 'default-log-fn)
+
+(defun log-database-command-fn (body-fn &key log-fn (database clsql:*default-database*))
+  (cond
+    (log-fn
+     (let* (results
+            (record (make-array 60 :fill-pointer 0 :adjustable T :element-type 'base-char)))
+       (with-output-to-string (str record)
+         (setf (clsql-sys:command-recording-stream database)
+               (make-broadcast-stream str)
+               results
+               (unwind-protect (multiple-value-list (funcall body-fn))
+                 (setf (clsql-sys:command-recording-stream database) nil)
+                 (setf record (pretty-print-sql record))
+                 (funcall log-fn record))))
+       (apply #'values results)))
+    (t (funcall body-fn))))
+
+(defmacro log-database-command ((&optional log-fn-name (database 'clsql:*default-database*))
+                                &body body)
   "MUST BE Inside a database connection, creates a lexical scope in which all sql commands
    executed on this connection are logged to a specific logger
 
@@ -236,19 +257,11 @@
    log-fn-name is a function/macro name that will be called with a string/array as
      (log-fn-name stuff)
    "
-  (alexandria:with-unique-names (str record results)
-    `(let* (,results
-	    (,record (make-array 60 :fill-pointer 0 :adjustable T :element-type 'base-char)))
-       (with-output-to-string (,str ,record)
-	 (setf (clsql-sys:command-recording-stream ,database)
-	       (make-broadcast-stream ,str)
-	       ,results
-	       (unwind-protect
-		    (progn ,@body)
-		 (setf (clsql-sys:command-recording-stream ,database) nil)
-		 (setf ,record (pretty-print-sql ,record))
-		 (,log-fn-name ,record))))
-       ,results)))
+  `(%call-perhaps-logged (lambda () ,@body)
+    ,(if (constantp log-fn-name)
+         `(load-time-value (%log-fn-perhaps ',log-fn-name))
+         `(%log-fn-perhaps ',log-fn-name))
+    ,database))
 
 (defun db-type-from-lisp-type (type &key (length 64) (scale 4)
                                     (pg-default-int-type "int8"))
@@ -318,3 +331,144 @@
     (float (format stream "~F" d))
     (clsql-sys:date (format stream "'~a'" (iso8601-datestamp d)))
     (clsql-sys:wall-time (format stream "'~a'" (clsql-sys:iso-timestring d)))))
+
+;;;; Object Creation shortcuts
+(defun make-instance-plist (columns row)
+  "Creates a plist intended to be passed to make-instance"
+  (iter (for c in columns)
+    (for data in row)
+    (collect (symbol-munger:underscores->keyword c))
+    (collect data)))
+
+(defun make-instances (class columns rows)
+  "From N rows and some column-names make N instances of class filling data from rows
+   using make instance"
+  (iter (for row in rows)
+      (for o = (apply #'make-instance class
+                      (make-instance-plist columns row)))
+      (collect o)))
+
+(defun make-instances-setting-slot-values (class columns rows)
+  "From N rows and column-name make N instances of class filling data from rows
+   by creating instances and setting slot-values"
+  (iter (for row in rows)
+      (for o = (make-instance class))
+      (iter (for c in columns)
+        (for d in row)
+        (setf (slot-value o c) d))
+      (collect o)))
+
+(defun make-instances-setting-accessors (class columns rows)
+  "From N rows and column-name make N instances of class filling data from rows
+   by creating instances and setting existing accessor functions"
+  (iter (for row in rows)
+      (for o = (make-instance class))
+      (iter (for c in columns)
+        (for d in row)
+        (for setter = `(setf ,c))
+        (for fn = (compute-applicable-methods setter (list d o)))
+        (when fn (funcall setter d o)))
+      (collect o)))
+
+(defun make-instances-setting-access (class columns rows)
+  "From N rows and column-name make N instances of class filling data from rows
+   by creating instances and setting through access lib"
+  (iter (for row in rows)
+      (for o = (make-instance class))
+      (iter (for c in columns)
+        (for d in row)
+        (setf (access:access o c) d))
+      (collect o)))
+
+;;;; DB-SELECTION Shortcuts
+
+(defun %command-if-needed (cmd params)
+  (if params
+      (clsql-sys:command-object cmd params)
+      cmd))
+
+(defun db-exec (cmd &key params log)
+  (with-a-database (nil :log log)
+    (clsql-sys:execute-command
+     (%command-if-needed cmd params))))
+
+(defun db-select (&rest select-args
+                  &aux log)
+  "Runs a clsql:select
+
+   defaulting to :flatp T
+   unnests any lists as part of the select list"
+  (when (listp (first select-args))
+    ;; flatten first element to prevent list-literal results from db
+    (setf select-args (append (alexandria:flatten select-args) (rest select-args))))
+  (access:ensure-arg-list-key-value! T :flatp select-args)
+  (multiple-value-bind (ps val)
+      (access:rem-arg-list-key-value :log select-args)
+    (setf log val
+          select-args ps))
+  (with-a-database (nil :log log)
+    (apply #'clsql-sys:select select-args)))
+
+(defun db-query (cmd &rest keys &key params log &allow-other-keys)
+  "runs a db query
+
+   sets :flatp to t
+   if params are provided we build a command object
+      (backend better support this)"
+  (access:rem-arg-list-key-value! params keys)
+  (access:rem-arg-list-key-value! log keys)
+  (access:ensure-arg-list-key-value! T :flatp keys)
+  (with-a-database (nil :log log)
+    (apply #'clsql-sys:query
+           (%command-if-needed cmd params)
+           keys)))
+
+(defun clsql-get-val (sql &key log)
+  "alias of get-scalar"
+  (db-scalar sql :log log))
+
+(defun db-scalar (cmd &rest keys &key params log)
+  "Query a single value from the database"
+  (declare (ignore params log))
+  (first (apply #'db-query cmd keys)))
+
+(defun db-select-scalar (&rest select-args)
+  "query a single row from the database using clsql:select"
+  (access:ensure-arg-list-key-value! 1 :flatp select-args)
+  (first (apply #'db-select select-args)))
+
+(defun db-query-plists (cmd &rest keys &key params log)
+  "Returns a list of plists that correspond to the query results"
+  (declare (ignore params log))
+  (multiple-value-bind (rows cols)
+      (apply #'db-query cmd keys)
+    (unless cols (error "Cannot build plists if column names are unavailable"))
+    (iter (for k in cols) (for v in (first rows))
+      (collect (symbol-munger:underscores->keyword k))
+      (collect v))))
+
+(defun db-objs (class cmd &key params (make-instances-fn #'make-instances)
+                          log
+                          (column-munger #'symbol-munger:underscores->lisp-symbol))
+  "retrieve objects of type class from the database using clsql-query
+
+  "
+  (let* ((rows-fields (multiple-value-list (apply #'db-query cmd :params params :log log)))
+         (rows (first rows-fields))
+         (fields (second rows-fields))
+         ;; intern in the package expected
+         (*package* (find-package (symbol-package class)))
+         (fields (mapcar column-munger fields)))
+    (funcall make-instances-fn class fields rows)))
+
+(defun db-objs-select (class columns &key select-args (make-instances-fn #'make-instances))
+  (let ((rows (apply #'db-select select-args)))
+    (funcall make-instances-fn class columns rows)))
+
+
+;;;; DB - Manipulation shortcuts
+
+(defun save! (db-obj &key log)
+  "saves the given object, then returns the saved object"
+  (with-a-database (nil :log log)
+    (clsql-sys:update-records-from-instance db-obj)) db-obj)

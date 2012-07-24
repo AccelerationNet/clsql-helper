@@ -14,9 +14,9 @@
   :serial T
   :components ((:file "package")
                (:file "iterate-clauses")
+               (:file "connections")
                (:file "date")
                (:file "clsql")
-               (:file "connections")
                (:file "migrations"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria

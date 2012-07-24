@@ -450,10 +450,10 @@
 (defun db-objs (class cmd &key params (make-instances-fn #'make-instances)
                           log
                           (column-munger #'symbol-munger:underscores->lisp-symbol))
-  "retrieve objects of type class from the database using clsql-query
+  "retrieve objects of type class from the database using db-query
 
   "
-  (let* ((rows-fields (multiple-value-list (apply #'db-query cmd :params params :log log)))
+  (let* ((rows-fields (multiple-value-list (db-query cmd :params params :log log)))
          (rows (first rows-fields))
          (fields (second rows-fields))
          ;; intern in the package expected

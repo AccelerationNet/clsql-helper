@@ -20,8 +20,7 @@
     (log-database-command-fn fn :log-fn log-fn :database database)
     (funcall fn)))
 
-(defun with-database-function (fn connect-settings &key post-connect-fn log
-                               &aux (fn-to-call fn) )
+(defun with-database-function (fn connect-settings &key post-connect-fn log)
   "opens a database connection with the given settings, and runs the function.
 
 connect-settings: a plist of connection info for clsql, also supports :post-connect-fn, a function to run after opening the connection
@@ -30,8 +29,6 @@ post-connect-fn: a function of no arguments to run after opening the connection
 
 "
   (declare (type function fn))
-  (when log (setf fn-to-call
-                  (lambda () (log-database-command (log)))))
   (destructuring-bind (spec . settings) (copy-list connect-settings)
     (let ((settings-post-connect (getf settings :post-connect-fn)))
       (setf (getf settings :make-default) nil)

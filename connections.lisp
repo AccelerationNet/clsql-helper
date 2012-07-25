@@ -34,18 +34,15 @@ post-connect-fn: a function of no arguments to run after opening the connection
       (setf (getf settings :make-default) nil)
       (remf settings :post-connect-fn)
       ;; only ever disconnect the database we connect
-      (let ((clsql-sys:*default-database*
-              (apply #'clsql-sys:connect spec settings)))
+      (let ((new-db (apply #'clsql-sys:connect spec settings)))
         (unwind-protect
-             ;; prevent people from changing what database we will disconnect
-             ;; if they setf
-             (let ((clsql-sys:*default-database* clsql-sys:*default-database*))
+             (let ((clsql-sys:*default-database* new-db))
                ;; call post-connect if needed
                (maybe-call post-connect-fn)
                (maybe-call settings-post-connect)
                (return-from with-database-function
                  (%call-perhaps-logged fn log)))
-          (clsql-sys:disconnect :database clsql-sys:*default-database*))))))
+          (clsql-sys:disconnect :database new-db))))))
 
 (defmacro with-database ((&optional (connection-settings *connection-settings*)
                           &key post-connect-fn log)

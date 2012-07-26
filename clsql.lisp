@@ -415,8 +415,8 @@
    sets :flatp to t
    if params are provided we build a command object
       (backend better support this)"
-  (access:rem-arg-list-key-value! params keys)
-  (access:rem-arg-list-key-value! log keys)
+  (access:rem-arg-list-key-value! :params keys)
+  (access:rem-arg-list-key-value! :log keys)
   (access:ensure-arg-list-key-value! T :flatp keys)
   (with-a-database (nil :log log)
     (apply #'clsql-sys:query

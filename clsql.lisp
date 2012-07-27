@@ -400,7 +400,8 @@
    unnests any lists as part of the select list"
   (when (listp (first select-args))
     ;; flatten first element to prevent list-literal results from db
-    (setf select-args (append (alexandria:flatten select-args) (rest select-args))))
+    (setf select-args (append (alexandria:flatten (first select-args))
+                              (rest select-args))))
   (access:ensure-arg-list-key-value! T :flatp select-args)
   (multiple-value-bind (ps val)
       (access:rem-arg-list-key-value :log select-args)

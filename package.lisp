@@ -14,6 +14,7 @@
    #:iso8601-datestamp
    #:iso8601-timestamp
    #:first-of-the-month
+   #:first-of-the-month?
    #:last-of-the-month
    #:first-of-next-month
    #:next-month
@@ -27,6 +28,9 @@
    #:+a-day+
    #:+a-year+
    #:date-diff
+   #:before-day-of-month
+   #:after-day-of-month
+
 
    ;; rest
    #:clsql-get-val #:clsql-exp #:db-string

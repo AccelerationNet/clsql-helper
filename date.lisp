@@ -275,8 +275,14 @@
     (finally (return yesterday))))
 
 (defun first-of-the-month (&optional (date (clsql-helper:current-sql-date)))
+  "returns the first of the month for the month/year of the date passed in"
   (convert-to-clsql-date! date)
   (clsql-sys:make-date :year (date-year date) :month (date-month date) :day 1))
+
+(defun first-of-the-month? (&optional (date (clsql-helper:current-sql-date)))
+  "returns whether or not the date passed in is the first of the month"
+  (convert-to-clsql-date! date)
+  (= 1 (date-day date)))
 
 (defun days-in-month (&optional (date (clsql-helper:current-sql-date)))
   "Return the number of days in the month of the date passed in"
@@ -297,6 +303,14 @@
 (defun first-of-next-month (&optional (date (clsql-helper:current-sql-date)))
   (convert-to-clsql-date! date)
   (first-of-the-month (next-month date)))
+
+(defun after-day-of-month (date day)
+  "Are we past a specific day of the month"
+  (> (date-day date) day))
+
+(defun before-day-of-month (date day)
+  "Are we past a specific day of the month"
+  (< (date-day date) day))
 
 (defun date-diff (d1 d2)
   "Gets the difference in days between two dates"

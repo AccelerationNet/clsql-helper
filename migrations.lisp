@@ -19,7 +19,10 @@
 
 (defun sql-hash (sql-statement)
   (format nil "~{~x~}"
-          (coerce (md5:md5sum-sequence sql-statement) 'list)))
+          (coerce (md5:md5sum-sequence
+                   ;; don't consider whitespace changes relevant
+                   (cl-ppcre:regex-replace-all "\\s" sql-statement))
+                  'list)))
 
 (defgeneric migrate (thing)
   (:method ((sql-statement string))

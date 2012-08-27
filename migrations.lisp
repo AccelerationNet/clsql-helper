@@ -21,7 +21,7 @@
   (format nil "~{~x~}"
           (coerce (md5:md5sum-sequence
                    ;; don't consider whitespace changes relevant
-                   (cl-ppcre:regex-replace-all "\\s" sql-statement))
+                   (cl-ppcre:regex-replace-all "\\s" sql-statement ""))
                   'list)))
 
 (defgeneric migrate (thing)

@@ -407,7 +407,8 @@
       (access:rem-arg-list-key-value :log select-args)
     (setf log val
           select-args ps))
-  (with-a-database (nil :log log)
+
+  (with-a-database (*connection-settings* :log log)
     (apply #'clsql-sys:select select-args)))
 
 (defun db-query (cmd &rest keys &key params log &allow-other-keys)

@@ -420,7 +420,7 @@
   (access:rem-arg-list-key-value! :params keys)
   (access:rem-arg-list-key-value! :log keys)
   (access:ensure-arg-list-key-value! T :flatp keys)
-  (with-a-database (nil :log log)
+  (with-a-database (*connection-settings* :log log)
     (apply #'clsql-sys:query
            (%command-if-needed cmd params)
            keys)))
@@ -472,5 +472,5 @@
 
 (defun save! (db-obj &key log)
   "saves the given object, then returns the saved object"
-  (with-a-database (nil :log log)
+  (with-a-database (*connection-settings* :log log)
     (clsql-sys:update-records-from-instance db-obj)) db-obj)

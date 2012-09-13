@@ -384,7 +384,7 @@
 
 (defun %command-if-needed (cmd params)
   (if params
-      (clsql-sys:command-object cmd params)
+      (clsql-sys:command-object cmd (alexandria:ensure-list params))
       cmd))
 
 (defun db-exec (cmd &key params log)

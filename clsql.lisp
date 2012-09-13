@@ -388,7 +388,7 @@
       cmd))
 
 (defun db-exec (cmd &key params log)
-  (with-a-database (nil :log log)
+  (with-a-database (*connection-settings* :log log)
     (clsql-sys:execute-command
      (%command-if-needed cmd params))))
 

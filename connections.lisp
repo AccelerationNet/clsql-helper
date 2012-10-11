@@ -36,7 +36,8 @@ post-connect-fn: a function of no arguments to run after opening the connection
       ;; only ever disconnect the database we connect
       (let ((new-db (apply #'clsql-sys:connect spec settings)))
         (unwind-protect
-             (let ((clsql-sys:*default-database* new-db))
+             (let ((clsql-sys:*default-database* new-db)
+                   (*connection-settings* connect-settings))
                ;; call post-connect if needed
                (maybe-call post-connect-fn)
                (maybe-call settings-post-connect)

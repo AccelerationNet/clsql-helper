@@ -210,4 +210,3 @@
     (assert-equal hash (clsql-helper::sql-hash "A
 B C") "newline")))
 
-(run-tests)

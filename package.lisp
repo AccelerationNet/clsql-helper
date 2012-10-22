@@ -27,6 +27,13 @@
    #:+a-month+
    #:+a-day+
    #:+a-year+
+   #:+a-negative-second+
+   #:+a-negative-minute+
+   #:+a-negative-hour+
+   #:+a-negative-month+
+   #:+a-negative-day+
+   #:+a-negative-year+
+
    #:date-diff
    #:before-day-of-month
    #:after-day-of-month

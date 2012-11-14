@@ -467,6 +467,11 @@
   (let ((rows (apply #'db-select select-args)))
     (funcall make-instances-fn class columns rows)))
 
+(defun join-slot? (slot-def)
+  (and (or (typep slot-def 'clsql-sys::view-class-direct-slot-definition)
+           (typep slot-def 'clsql-sys::view-class-effective-slot-definition))
+       (eql :join (clsql-sys::view-class-slot-db-kind slot-def))))
+
 
 ;;;; DB - Manipulation shortcuts
 

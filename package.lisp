@@ -40,6 +40,7 @@
 
 
    ;; rest
+   #:join-slot?
    #:clsql-get-val #:clsql-exp #:db-string
    #:clsql-ands #:clsql-and
    #:clsql-ors #:clsql-or

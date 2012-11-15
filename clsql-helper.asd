@@ -17,6 +17,7 @@
                (:file "connections")
                (:file "date")
                (:file "clsql")
+               (:file "dirty")
                (:file "migrations"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria

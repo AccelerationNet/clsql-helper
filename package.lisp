@@ -1,6 +1,17 @@
 (cl:defpackage :clsql-helper
   (:use :cl :cl-user :iter)
   (:export
+   ;; dirty
+   #:dirty-slots
+   #:slot-dirty?
+   #:dirty-test
+   #:record-dirty?
+   #:reset-dirty?
+   #:find-dirty-test
+   #:dirty-slots-mixin
+   #:dirty-db-slots-mixin
+
+
    ;; date stuff
    #:current-sql-date #:current-sql-time
    #:print-nullable-date #:print-nullable-datetime

@@ -13,8 +13,6 @@
 (defclass dirty-db-slots-mixin ()
   ((dirty-slots :accessor dirty-slots :initarg :dirty-slots :initform nil
                 :db-kind :virtual)
-   (record-dirty? :accessor record-dirty? :initarg :record-dirty? :initform nil
-                  :db-kind :virtual)
    (dirty-test :accessor dirty-test :initarg :dirty-test :initform `((T . ,#'equalp))
                :db-kind :virtual))
   (:metaclass clsql-sys::standard-db-class))
@@ -31,11 +29,10 @@
                       &aux (name (closer-mop:slot-definition-name slot)))
   ;; if its not bound but has an init form, then we are in object creation
   (when (and
-         (slot-boundp object 'record-dirty?)
+         *record-this-dirty-slot* ;; dont record if updating from database
          (slot-boundp object 'dirty-slots)
          (slot-boundp object 'dirty-test)
-         (record-dirty? object)
-         (not (member name '(dirty-slots dirty-test record-dirty?))))
+         (not (member name '(dirty-slots dirty-test))))
     (let* ((test-fn (find-dirty-test object name))
            (old (when (slot-boundp object name)
                       (closer-mop:slot-value-using-class class object slot)))
@@ -43,19 +40,34 @@
       (when dirty?
         (pushnew (make-dirty-slot name old new) (dirty-slots object) :key #'slot-name)))))
 
-(defun reset-dirty ( o &optional (start? t))
-  (setf (dirty-slots o) nil
-        (record-dirty? o) start?))
+(defun reset-dirty ( o )
+  (setf (dirty-slots o) nil))
 
-(defmethod slot-dirty? ((o dirty-db-slots-mixin) slot-name)
+(defmethod slot-dirty? ((o dirty-db-slots-mixin) slot-name &key (all? nil))
   (iter (for sn in (alexandria:ensure-list slot-name))
-    (when (member sn (dirty-slots o) :key #'slot-name)
-      (return T))))
+    (let ((res (find (clsql-sys::to-slot-name sn)
+                     (dirty-slots o)
+                     :key #'slot-name)))
+      (if all?
+          (always res)
+          (thereis res)))))
 
 (defmethod clsql-sys::get-slot-values-from-view :after
     ((o dirty-db-slots-mixin) slotdefs vals)
   "This setfs slot values from the database values during select, so it makes sense to reset after
    ward"
+  (reset-dirty o))
+
+(defvar *record-this-dirty-slot* t
+  "Should we record this slot as dirty?")
+
+(defmethod clsql-sys::update-slot-from-db-value :around ((o dirty-db-slots-mixin) slot value)
+  " disable dirty slot recording if the value is from the database "
+  (let ( *record-this-dirty-slot* )
+    (call-next-method)))
+
+(defmethod clsql-sys:update-instance-from-records :after ((o dirty-db-slots-mixin) &key database)
+  (declare (ignore database))
   (reset-dirty o))
 
 (defmethod (setf closer-mop:slot-value-using-class) :before
@@ -67,6 +79,7 @@
 
 (defmethod clsql-sys::update-records-from-instance-slots-and-values
     ((obj dirty-db-slots-mixin) view-class database)
+  "TODO: remove this defunct function, once the oodml refactor branch is merged"
   (let* ((database (clsql-sys::choose-database-for-instance obj database))
          (all-slots (if (clsql-sys::normalizedp view-class)
                         (clsql-sys::ordered-class-direct-slots view-class)
@@ -78,11 +91,20 @@
                  collect (clsql-sys::%slot-value-list obj s database))))
     record-values))
 
+(defmethod clsql-sys::view-classes-and-storable-slots-for-instance ((object dirty-db-slots-mixin))
+  (let ((classes-and-slots (call-next-method)))
+    (iter (for class-and-slots in classes-and-slots)
+      (setf (clsql-sys::slot-defs class-and-slots)
+            (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
+              (when (slot-dirty? object slot-def)
+                (collect slot-def))))
+      (when (clsql-sys::slot-defs class-and-slots)
+        (collect class-and-slots)))))
+
 #| reimplementation for normal classes (different metaclass)
 
 (defclass dirty-slots-mixin ()
   ((dirty :accessor dirty :initarg :dirty :initform nil)
-   (record-dirty? :accessor record-dirty? :initarg :record-dirty? :initform nil)
    (dirty-test :accessor dirty-test :initarg :dirty-test :initform `((T . ,#'equalp)))))
 
 (defmethod (setf closer-mop:slot-value-using-class) :before

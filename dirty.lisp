@@ -66,8 +66,8 @@
   (let ( *record-this-dirty-slot* )
     (call-next-method)))
 
-(defmethod clsql-sys:update-instance-from-records :after ((o dirty-db-slots-mixin) &key database)
-  (declare (ignore database))
+(defmethod clsql-sys:update-instance-from-records :after
+    ((o dirty-db-slots-mixin) &key &allow-other-keys)
   (reset-dirty o))
 
 (defmethod (setf closer-mop:slot-value-using-class) :before

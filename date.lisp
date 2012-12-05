@@ -320,9 +320,12 @@
   (< (date-day date) day))
 
 (defun date-diff (d1 d2)
-  "Gets the difference in days between two dates"
-  (convert-to-clsql-date! d1)
-  (convert-to-clsql-date! d2)
+  "Gets the difference in days between two dates
+    returns a negative number to indicate that d1 is after d2
+    returns a positive number to indicate that d2 is after d1"
+  (convert-to-clsql-date! d1 d2)
   ;; date-diff returns only days and seconds (for times)
-  (clsql-sys:duration-day
-   (clsql-sys:date-difference d1 d2)))
+  (let ((days (clsql-sys:duration-day (clsql-sys:date-difference d1 d2))))
+    (if (clsql:date< d1 d2)
+        days
+        (- days))))

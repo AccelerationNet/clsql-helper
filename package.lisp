@@ -88,6 +88,10 @@
    #:with-database
    #:with-a-database
 
+   #:with-command-logging
+   #:*command-log-stream*
+   #:with-command-logging-to-string
+
    ;;migration functions
    #:*migration-table-name*
    #:migrations

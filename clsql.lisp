@@ -5,7 +5,58 @@
 (define-condition save-failed (error)
   ((message :initarg :message :accessor message)))
 
+(defvar *command-log-stream* nil "a stream that we will record sql commands to in the body of ")
 
+(defmacro with-command-logging ((&key (database 'clsql:*default-database*))
+                                &body body)
+  "record commands to the *command-log-stream* for the duration of body then
+   restore its previous binding"
+  (alexandria:with-unique-names (original-stream)
+    `(let ((,original-stream (clsql-sys:command-recording-stream ,database)))
+      (unwind-protect
+           (progn
+             (setf (clsql-sys:command-recording-stream ,database)
+                   (make-broadcast-stream *command-log-stream*))
+             ,@body)
+        (setf (clsql-sys:command-recording-stream ,database)
+              ,original-stream)))))
+
+(defmacro with-command-logging-to-string ((&key string
+                                           (database 'clsql:*default-database*))
+                                          &body body)
+  "Log the sql commands of the body to a string"
+  `(with-output-to-string (*command-log-stream* ,string)
+    (with-command-logging (:database ,database) ,@body)))
+
+(defun default-log-fn (msg)
+  (format *trace-output* "~%~A~%" msg))
+
+(defvar *default-log-fn* 'default-log-fn)
+
+(defun log-database-command-fn (body-fn &key log-fn (database clsql:*default-database*))
+  (cond
+    (log-fn
+     (let* ((record (make-array 60 :fill-pointer 0 :adjustable T :element-type 'base-char)))
+       (with-command-logging-to-string (:string record :database database)
+         (unwind-protect (funcall body-fn)
+           (funcall log-fn (pretty-print-sql record))))))
+    (t (funcall body-fn))))
+
+(defmacro log-database-command ((&optional log-fn-name (database 'clsql:*default-database*))
+                                &body body)
+  "MUST BE Inside a database connection, creates a lexical scope in which all sql commands
+   executed on this connection are logged to a specific logger
+
+   tries to format such that it will be readable in the log
+
+   log-fn-name is a function/macro name that will be called with a string/array as
+     (log-fn-name stuff)
+   "
+  `(%call-perhaps-logged (lambda () ,@body)
+    ,(if (constantp log-fn-name)
+         `(load-time-value (%log-fn-perhaps ',log-fn-name))
+         `(%log-fn-perhaps ',log-fn-name))
+    ,database))
 
 (defun clsql-exp (s)
   (clsql-sys:sql-expression :string s))
@@ -225,43 +276,6 @@
                (T
                 "" ))))
          :simple-calls T)))))
-
-(defun default-log-fn (msg)
-  (format *trace-output* "~%~A~%" msg))
-
-(defvar *default-log-fn* 'default-log-fn)
-
-(defun log-database-command-fn (body-fn &key log-fn (database clsql:*default-database*))
-  (cond
-    (log-fn
-     (let* (results
-            (record (make-array 60 :fill-pointer 0 :adjustable T :element-type 'base-char)))
-       (with-output-to-string (str record)
-         (setf (clsql-sys:command-recording-stream database)
-               (make-broadcast-stream str)
-               results
-               (unwind-protect (multiple-value-list (funcall body-fn))
-                 (setf (clsql-sys:command-recording-stream database) nil)
-                 (setf record (pretty-print-sql record))
-                 (funcall log-fn record))))
-       (apply #'values results)))
-    (t (funcall body-fn))))
-
-(defmacro log-database-command ((&optional log-fn-name (database 'clsql:*default-database*))
-                                &body body)
-  "MUST BE Inside a database connection, creates a lexical scope in which all sql commands
-   executed on this connection are logged to a specific logger
-
-   tries to format such that it will be readable in the log
-
-   log-fn-name is a function/macro name that will be called with a string/array as
-     (log-fn-name stuff)
-   "
-  `(%call-perhaps-logged (lambda () ,@body)
-    ,(if (constantp log-fn-name)
-         `(load-time-value (%log-fn-perhaps ',log-fn-name))
-         `(%log-fn-perhaps ',log-fn-name))
-    ,database))
 
 (defun db-type-from-lisp-type (type &key (length 64) (scale 4)
                                     (pg-default-int-type "int8"))

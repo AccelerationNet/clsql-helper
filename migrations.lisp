@@ -65,13 +65,19 @@
          :values (list hash sql-statement (clsql-helper:current-sql-time))))))
   ;; if we get a pathname, read it into a string
   (:method ((sql-file pathname))
-    (migrate (alexandria:read-file-into-string sql-file))))
+    (migrate (alexandria:read-file-into-string sql-file)))
+  ;; if we're a function, assume it's generating sql
+  (:method ((fn function))
+    (migrate (funcall fn)))
+  ;; migrate each list item
+  (:method ((statements list))
+    ;; flatten first to support broader input (makes programatically generating
+    ;; `sql-statement`s at call sites a little easier.)
+    (mapc #'migrate (alexandria:flatten statements))))
 
 (defun migrations (&rest sql-statements)
   "run `sql-statements` on the database once and only once. `sql-statements`
 can be strings, pathnames, or lists."
   (unless clsql-sys:*default-database* (error "must have a database connection open."))
   (ensure-migration-table)
-  ;; flatten first to support broader input (makes programatically generating
-  ;; `sql-statement`s at call sites a little easier.)
-  (mapc #'migrate (alexandria:flatten sql-statements)))
+  (mapc #'migrate sql-statements))

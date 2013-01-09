@@ -22,9 +22,14 @@
     (clsql-sys:create-table
      *migration-table-name*
      ;; hash of our query
-     '(([hash] longchar :not-null :unique)
+     `(([hash] string :not-null :unique)
        ;; the actual query
-       ([query] longchar :not-null)
+       ([query] string
+		;; specify the underlying db type, supports SQL Server 2005+ and Postgresql
+		,(ecase (clsql-sys:database-underlying-type clsql-sys:*default-database*)
+		   (:mssql "VARCHAR(MAX)")
+		   (:postgresql "text"))
+		:not-null)
        ;; when we migrated it
        ([date-entered] clsql-sys:wall-time :not-null)))))
 

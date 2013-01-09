@@ -91,7 +91,8 @@
                  collect (clsql-sys::%slot-value-list obj s database))))
     record-values))
 
-(when (typep #'clsql-sys::view-classes-and-storable-slots 'standard-generic-function)
+(when (typep (ignore-errors #'clsql-sys::view-classes-and-storable-slots)
+             'standard-generic-function)
   (defmethod clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
     (let ((classes-and-slots (call-next-method)))
       (iter (for class-and-slots in classes-and-slots)

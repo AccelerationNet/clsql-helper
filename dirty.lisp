@@ -91,15 +91,16 @@
                  collect (clsql-sys::%slot-value-list obj s database))))
     record-values))
 
-(defmethod clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
-  (let ((classes-and-slots (call-next-method)))
-    (iter (for class-and-slots in classes-and-slots)
-      (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
-                    (when (slot-dirty? object slot-def)
-                      (collect slot-def))))
-      (when defs
-        (setf (clsql-sys::slot-defs class-and-slots) defs)
-        (collect class-and-slots)))))
+(when (typep #'clsql-sys::view-classes-and-storable-slots 'standard-generic-function)
+  (defmethod clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
+    (let ((classes-and-slots (call-next-method)))
+      (iter (for class-and-slots in classes-and-slots)
+        (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
+                      (when (slot-dirty? object slot-def)
+                        (collect slot-def))))
+        (when defs
+          (setf (clsql-sys::slot-defs class-and-slots) defs)
+          (collect class-and-slots))))))
 
 #| reimplementation for normal classes (different metaclass)
 

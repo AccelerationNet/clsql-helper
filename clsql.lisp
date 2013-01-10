@@ -159,7 +159,10 @@
                   (string (make-instance 'clsql-sys:sql-ident :name column ))
                   (t column)))
   (first (clsql:select class
-	   :where [= column colvalue]
+	   :where
+           (if colvalue
+               [= column colvalue]
+               [null column])
 	   :flatp T)))
 
 (defun primary-key-slots (obj)

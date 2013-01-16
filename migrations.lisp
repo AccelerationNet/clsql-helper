@@ -85,4 +85,4 @@
 can be strings, pathnames, or lists."
   (unless clsql-sys:*default-database* (error "must have a database connection open."))
   (ensure-migration-table)
-  (mapc #'migrate sql-statements))
+  (migrate sql-statements))

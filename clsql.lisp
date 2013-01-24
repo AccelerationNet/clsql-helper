@@ -450,7 +450,7 @@
 
 (defun db-select-scalar (&rest select-args)
   "query a single row from the database using clsql:select"
-  (access:ensure-arg-list-key-value! 1 :flatp select-args)
+  (access:ensure-arg-list-key-value! 1 :limit select-args)
   (first (apply #'db-select select-args)))
 
 (defun db-query-plists (cmd &rest keys &key params log)

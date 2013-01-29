@@ -43,7 +43,7 @@
   "returns a hashed form of the query, as a string"
   ;;`md5sum-sequence` returns a vector of bytes, convert it to a hex string
   (format nil "~{~x~}"
-          (coerce (md5:md5sum-sequence
+          (coerce (md5:md5sum-string
                    ;; don't consider whitespace changes relevant
                    (cl-ppcre:regex-replace-all "\\s" sql-statement ""))
                   'list)))

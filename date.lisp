@@ -309,7 +309,7 @@
 
 (defun first-of-next-month (&optional (date (clsql-helper:current-sql-date)))
   (convert-to-clsql-date! date)
-  (first-of-the-month (next-month date)))
+  (next-month (first-of-the-month date)))
 
 (defun after-day-of-month (date day)
   "Are we past a specific day of the month"

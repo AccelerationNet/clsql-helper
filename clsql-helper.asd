@@ -13,6 +13,7 @@
   :version "0.1"
   :serial T
   :components ((:file "package")
+               (:file "utils")
                (:file "iterate-clauses")
                (:file "connections")
                (:file "date")

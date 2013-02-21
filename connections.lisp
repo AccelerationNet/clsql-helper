@@ -57,8 +57,6 @@ post-connect-fn: a function of no arguments to run after opening the connection 
     :post-connect-fn ,post-connect-fn
     :log ,log))
 
-(defvar *connection-settings* ())
-
 (defun coerce-connection-spec (c)
   (etypecase c
     (null nil)

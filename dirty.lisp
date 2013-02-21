@@ -2,9 +2,6 @@
 (cl-interpol:enable-interpol-syntax)
 (clsql:file-enable-sql-reader-syntax)
 
-(defvar *record-this-dirty-slot* t
-  "Should we record this slot as dirty?")
-
 (defclass dirty-slot ()
   ((slot-name :accessor slot-name :initarg :slot-name :initform nil)
    (old-value :accessor old-value :initarg :old-value :initform nil)

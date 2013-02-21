@@ -5,8 +5,6 @@
 (define-condition save-failed (error)
   ((message :initarg :message :accessor message)))
 
-(defvar *command-log-stream* nil "a stream that we will record sql commands to in the body of ")
-
 (defmacro with-command-logging ((&key (database 'clsql:*default-database*))
                                 &body body)
   "record commands to the *command-log-stream* for the duration of body then
@@ -30,8 +28,6 @@
 
 (defun default-log-fn (msg)
   (format *trace-output* "~%~A~%" msg))
-
-(defvar *default-log-fn* 'default-log-fn)
 
 (defun log-database-command-fn (body-fn &key log-fn (database clsql:*default-database*))
   (cond

@@ -1,5 +1,21 @@
 (in-package :clsql-helper)
 
+;; forward references to special variables is apparently bad, so
+;; here are the variables that would make slightly more sense in date.lisp
+(defparameter +a-negative-second+ (clsql-sys:make-duration :second -1))
+(defparameter +a-negative-minute+ (clsql-sys:make-duration :minute -1))
+(defparameter +a-negative-hour+ (clsql-sys:make-duration :hour -1))
+(defparameter +a-negative-day+ (clsql-sys:make-duration :day -1))
+(defparameter +a-negative-month+ (clsql-sys:make-duration :month -1))
+(defparameter +a-negative-year+ (clsql-sys:make-duration :year -1))
+
+(defparameter +a-second+ (clsql-sys:make-duration :second 1))
+(defparameter +a-minute+ (clsql-sys:make-duration :minute 1))
+(defparameter +an-hour+ (clsql-sys:make-duration :hour 1))
+(defparameter +a-day+ (clsql-sys:make-duration :day 1))
+(defparameter +a-month+ (clsql-sys:make-duration :month 1))
+(defparameter +a-year+ (clsql-sys:make-duration :year 1))
+
 ;;;; BEWARE These are largely the same (COPY/PASTA) and I have tried to comment the differences
 ;;;; because of all the macrology I couldnt quite figure out how to abstract it
 

@@ -2,6 +2,9 @@
 (cl-interpol:enable-interpol-syntax)
 (clsql:file-enable-sql-reader-syntax)
 
+(defvar *record-this-dirty-slot* t
+  "Should we record this slot as dirty?")
+
 (defclass dirty-slot ()
   ((slot-name :accessor slot-name :initarg :slot-name :initform nil)
    (old-value :accessor old-value :initarg :old-value :initform nil)
@@ -43,23 +46,24 @@
 (defun reset-dirty ( o )
   (setf (dirty-slots o) nil))
 
-(defmethod slot-dirty? ((o dirty-db-slots-mixin) slot-name &key (all? nil))
-  (iter (for sn in (alexandria:ensure-list slot-name))
-    (let ((res (find (clsql-sys::to-slot-name sn)
-                     (dirty-slots o)
-                     :key #'slot-name)))
-      (if all?
-          (always res)
-          (thereis res)))))
+(defgeneric slot-dirty? ( object slot-name &key all?)
+  (:documentation "determines whether or not a slot on a given object is dirty
+      slot-name can be a list and all? determines if we want to not if all of
+      them or dirty or if any of them are dirty")
+  (:method ((o dirty-db-slots-mixin) slot-name &key (all? nil))
+    (iter (for sn in (alexandria:ensure-list slot-name))
+      (let ((res (find (clsql-sys::to-slot-name sn)
+                       (dirty-slots o)
+                       :key #'slot-name)))
+        (if all?
+            (always res)
+            (thereis res))))))
 
 (defmethod clsql-sys::get-slot-values-from-view :after
     ((o dirty-db-slots-mixin) slotdefs vals)
   "This setfs slot values from the database values during select, so it makes sense to reset after
    ward"
   (reset-dirty o))
-
-(defvar *record-this-dirty-slot* t
-  "Should we record this slot as dirty?")
 
 (defmethod clsql-sys::update-slot-from-db-value :around ((o dirty-db-slots-mixin) slot value)
   " disable dirty slot recording if the value is from the database "
@@ -77,7 +81,11 @@
      (slot closer-mop:standard-effective-slot-definition))
   (%dirty-before new class object slot))
 
-(defmethod clsql-sys::update-records-from-instance-slots-and-values
+(defmacro defmethod-when-defined (name args &body body)
+  (when (typep (ignore-errors (fdefinition name)) 'standard-generic-function)
+    `(defmethod ,name ,args ,@body)))
+
+(defmethod-when-defined clsql-sys::update-records-from-instance-slots-and-values
     ((obj dirty-db-slots-mixin) view-class database)
   "TODO: remove this defunct function, once the oodml refactor branch is merged"
   (let* ((database (clsql-sys::choose-database-for-instance obj database))
@@ -91,17 +99,15 @@
                  collect (clsql-sys::%slot-value-list obj s database))))
     record-values))
 
-(when (typep (ignore-errors #'clsql-sys::view-classes-and-storable-slots)
-             'standard-generic-function)
-  (defmethod clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
-    (let ((classes-and-slots (call-next-method)))
-      (iter (for class-and-slots in classes-and-slots)
-        (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
-                      (when (slot-dirty? object slot-def)
-                        (collect slot-def))))
-        (when defs
-          (setf (clsql-sys::slot-defs class-and-slots) defs)
-          (collect class-and-slots))))))
+(defmethod-when-defined clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
+  (let ((classes-and-slots (call-next-method)))
+    (iter (for class-and-slots in classes-and-slots)
+      (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
+                    (when (slot-dirty? object slot-def)
+                      (collect slot-def))))
+      (when defs
+        (setf (clsql-sys::slot-defs class-and-slots) defs)
+        (collect class-and-slots)))))
 
 #| reimplementation for normal classes (different metaclass)
 

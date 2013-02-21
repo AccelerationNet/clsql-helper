@@ -259,20 +259,6 @@
            (declare (ignore usec))
            (list second minute hour day month year timezone))))
 
-(defparameter +a-negative-second+ (clsql-sys:make-duration :second -1))
-(defparameter +a-negative-minute+ (clsql-sys:make-duration :minute -1))
-(defparameter +a-negative-hour+ (clsql-sys:make-duration :hour -1))
-(defparameter +a-negative-day+ (clsql-sys:make-duration :day -1))
-(defparameter +a-negative-month+ (clsql-sys:make-duration :month -1))
-(defparameter +a-negative-year+ (clsql-sys:make-duration :year -1))
-
-(defparameter +a-second+ (clsql-sys:make-duration :second 1))
-(defparameter +a-minute+ (clsql-sys:make-duration :minute 1))
-(defparameter +an-hour+ (clsql-sys:make-duration :hour 1))
-(defparameter +a-day+ (clsql-sys:make-duration :day 1))
-(defparameter +a-month+ (clsql-sys:make-duration :month 1))
-(defparameter +a-year+ (clsql-sys:make-duration :year 1))
-
 (defun last-of-the-month (start-date &aux (month (clsql-helper:date-month start-date)))
   "Returns the first of next month eg: 2/14/2012->2/29/2012"
   (iter

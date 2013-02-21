@@ -65,16 +65,18 @@
   (make-instance 'clsql-sys:sql-ident-attribute
                  :name column :qualifier table))
 
-(defmethod coerce-to-db-string-representation (s)
-  "Convert an object into an unquoted string that the database understands
+(defgeneric coerce-to-db-string-representation (s)
+  (:documentation
+   "Convert an object into an unquoted string that the database understands
 
-   mostly used to do the coercion in db-string"
-  (trim-and-nullify
-   (typecase s
-     (string s)
-     (clsql-sys:date (print-nullable-date s))
-     (clsql-sys:wall-time (print-nullable-datetime s))
-     (t (princ-to-string s)))))
+   mostly used to do the coercion in db-string")
+  (:method (s)
+    (trim-and-nullify
+     (typecase s
+       (string s)
+       (clsql-sys:date (print-nullable-date s))
+       (clsql-sys:wall-time (print-nullable-datetime s))
+       (t (princ-to-string s))))))
 
 (defun db-string (s &key (prefix "")(postfix "")(wrapper "") )
   "trims, nullifies, escapes and wraps in single quotes so that the string is ready
@@ -150,20 +152,22 @@
     "direct implementation of by-id, (select class). fetchs the first row for the given class by id"
     (by-col class colname id)))
 
-(defmethod by-col (class column colvalue)
-  "fetchs the first row for the given class by id"
-  (setf column (typecase column
-                  (symbol (make-instance 'clsql-sys:sql-ident
-                                         :name (symbol-munger:lisp->underscores
-                                                column)))
-                  (string (make-instance 'clsql-sys:sql-ident :name column ))
-                  (t column)))
-  (first (clsql:select class
-	   :where
-           (if colvalue
-               [= column colvalue]
-               [null column])
-	   :flatp T)))
+(defgeneric by-col (class column colvalue)
+  (:documentation
+   "fetchs the first row for the given class by id")
+  (:method (class column colvalue)
+    (setf column (typecase column
+                   (symbol (make-instance 'clsql-sys:sql-ident
+                                          :name (symbol-munger:lisp->underscores
+                                                 column)))
+                   (string (make-instance 'clsql-sys:sql-ident :name column ))
+                   (t column)))
+    (first (clsql:select class
+             :where
+             (if colvalue
+                 [= column colvalue]
+                 [null column])
+             :flatp T))))
 
 (defun primary-key-slots (obj)
   (clsql-sys::key-slots
@@ -204,46 +208,52 @@
     (collecting key into keys)
     (finally (return (values (clsql-ands exprs) keys)))))
 
-(defmethod new-object-p (obj)
-  "Checks that primary keys have values and that the object
-   with those primary key values exists in the database"
-  (let* ((class (class-of obj))
-	 (keys (primary-key-slot-names obj)))
-    (unless keys
-      (warn-db-obj-has-no-keys obj)
-      (return-from new-object-p nil))
-    (not (and (every (lambda (k) (slot-boundp obj k)) keys)
-	      (every (lambda (k) (slot-value obj k)) keys)
-	      (clsql:select 1
-                :from (class-name class)
-		:flatp T
-                :limit 1
-		:where (primary-key-where-clauses obj))))))
+(defgeneric new-object-p (obj)
+  (:documentation
+   "Checks that primary keys have values and that the object
+   with those primary key values exists in the database")
+  (:method (obj)
+    (let* ((class (class-of obj))
+           (keys (primary-key-slot-names obj)))
+      (unless keys
+        (warn-db-obj-has-no-keys obj)
+        (return-from new-object-p nil))
+      (not (and (every (lambda (k) (slot-boundp obj k)) keys)
+                (every (lambda (k) (slot-value obj k)) keys)
+                (clsql:select 1
+                  :from (class-name class)
+                  :flatp T
+                  :limit 1
+                  :where (primary-key-where-clauses obj)))))))
 
-(defmethod db-object-key-slots (o)
-  (typecase o
-    (clsql-sys:standard-db-object
-     (db-object-key-slots (class-of o)))
-    (clsql-sys::standard-db-class
-     (clsql-sys::key-slots o))))
+(defgeneric db-object-key-slots (o)
+  (:documentation "returns the primarky key-slots of the given object")
+  (:method (o)
+    (typecase o
+      (clsql-sys:standard-db-object
+       (db-object-key-slots (class-of o)))
+      (clsql-sys::standard-db-class
+       (clsql-sys::key-slots o)))))
 
-(defmethod db-eql (x y &key (test #'equalp))
-  "Tries to determine if the objects are of the same type and have the same primary key values
-      Many times objects which pass new-objectp are db-eql ,but once saved are no longer db-eql (due to using serial pkey)"
-  (or (and (null x) (null y))
-      (and
-       (eql (class-of x) (class-of y))
-       ;; make sure all the keys have the same values
-       (let ((keys (primary-key-slot-names x)))
-         (unless keys (error-db-obj-has-no-keys x))
-         (iter (for key in keys)
-           (for s1 = (slot-boundp x key))
-           (for s2 = (slot-boundp y key))
-           ;;true when either both slots are unbound or both slots have the same value
-           (always (or (not (or s1 s2))
-                       (and s1 s2
-                            (funcall test (slot-value x key)
-                                     (slot-value y key))))))))))
+(defgeneric db-eql (x y &key test)
+  (:documentation
+   "Tries to determine if the objects are of the same type and have the same primary key values
+      Many times objects which pass new-objectp are db-eql ,but once saved are no longer db-eql (due to using serial pkey)")
+  (:method (x y &key (test #'equalp))
+    (or (and (null x) (null y))
+        (and
+         (eql (class-of x) (class-of y))
+         ;; make sure all the keys have the same values
+         (let ((keys (primary-key-slot-names x)))
+           (unless keys (error-db-obj-has-no-keys x))
+           (iter (for key in keys)
+             (for s1 = (slot-boundp x key))
+             (for s2 = (slot-boundp y key))
+             ;;true when either both slots are unbound or both slots have the same value
+             (always (or (not (or s1 s2))
+                         (and s1 s2
+                              (funcall test (slot-value x key)
+                                       (slot-value y key)))))))))))
 
 (defun pretty-print-sql (sql-command)
   (when (and sql-command (stringp sql-command))

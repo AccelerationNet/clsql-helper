@@ -22,23 +22,25 @@
             ((string-equal s "null") nil)
 	    (T s)))))
 
-(defmethod relaxed-parse-float (str &key (type 'double-float))
-  "trys to read a value we hope to be a floating point number returns nil on failure
+(defgeneric relaxed-parse-float (str &key type)
+  (:documentation
+   "trys to read a value we hope to be a floating point number returns nil on failure
 
-   The goal is to allow reading strings with spaces commas and dollar signs in them correctly 
-  "
-  (etypecase str
-    (null nil)
-    (float str)
-    (number (float str (ecase type
-                         (single-float 0.0)
-                         ((float double-float) 0.0d0))))
-    ((or string symbol)
-     (let* ((str (cl-ppcre:regex-replace-all #?r"\s|\$|\,|\%" (string str) ""))
-            (*read-eval* nil)
-            (*read-default-float-format* type))
-       (ignore-errors
-        (coerce (read-from-string str) type))))))
+   The goal is to allow reading strings with spaces commas and dollar signs in them correctly
+  ")
+  (:method (str &key (type 'double-float))
+    (etypecase str
+      (null nil)
+      (float str)
+      (number (float str (ecase type
+                           (single-float 0.0)
+                           ((float double-float) 0.0d0))))
+      ((or string symbol)
+       (let* ((str (cl-ppcre:regex-replace-all #?r"\s|\$|\,|\%" (string str) ""))
+              (*read-eval* nil)
+              (*read-default-float-format* type))
+         (ignore-errors
+          (coerce (read-from-string str) type)))))))
 ;;;;
 
 (defun current-sql-date ()
@@ -67,34 +69,39 @@
 	  (format stream "~A" date))
 	(format stream "~A" date))))
 
-(defmethod date-day (d)
-  (etypecase d
-    (clsql-sys:date
+(defgeneric date-day (d)
+  (:documentation "Given an object that encodes a date, return the day component")
+  (:method (d)
+    (etypecase d
+      (clsql-sys:date
        (third (multiple-value-list (clsql-sys:date-ymd d))))
-    (clsql-sys:wall-time
+      (clsql-sys:wall-time
        (third (multiple-value-list (clsql-sys:time-ymd d))))
-    ((or string integer)
-     (date-day (convert-to-clsql-datetime d)))
-    (null nil)
-    ))
+      ((or string integer)
+       (date-day (convert-to-clsql-datetime d)))
+      (null nil))))
 
-(defmethod date-year (d )
-  (etypecase d
-    (clsql-sys:date (clsql-sys:date-ymd d))
-    (clsql-sys:wall-time (clsql-sys:time-ymd d))
-    ((or string integer)
-     (date-year (convert-to-clsql-datetime d)))
-    (null nil)))
+(defgeneric date-year (d )
+  (:documentation "Given an object that encodes a date, return the year component")
+  (:method (d)
+    (etypecase d
+      (clsql-sys:date (clsql-sys:date-ymd d))
+      (clsql-sys:wall-time (clsql-sys:time-ymd d))
+      ((or string integer)
+       (date-year (convert-to-clsql-datetime d)))
+      (null nil))))
 
-(defmethod date-month (d)
-  (etypecase d
-    (clsql-sys:date
-     (second (multiple-value-list (clsql-sys:date-ymd d))))
-    (clsql-sys:wall-time
-     (second (multiple-value-list (clsql-sys:time-ymd d))))
-    ((or string integer)
-     (date-month (convert-to-clsql-datetime d)))
-    (null nil)))
+(defgeneric date-month (d)
+  (:documentation "Given an object that encodes a date, return the month component")
+  (:method (d)
+    (etypecase d
+      (clsql-sys:date
+       (second (multiple-value-list (clsql-sys:date-ymd d))))
+      (clsql-sys:wall-time
+       (second (multiple-value-list (clsql-sys:time-ymd d))))
+      ((or string integer)
+       (date-month (convert-to-clsql-datetime d)))
+      (null nil))))
 
 (defun month-string  (d)
   "Converts the date to the full name, January, February,etc"
@@ -143,45 +150,50 @@
 (defvar *iso8601-time-separator* ":")
 (defvar *iso8601-date-separator* "-")
 
-(defmethod iso8601-datestamp (d)
-  (typecase d
-    ((or clsql-sys:wall-time clsql-sys:date)
-     (format nil "~4,'0D~A~2,'0D~A~2,'0D"
-             (date-year d) *iso8601-date-separator* (date-month d)
-             *iso8601-date-separator* (date-day d)))
-    ((or string integer) (iso8601-datestamp (convert-to-clsql-datetime d)))
-    (null nil)))
+(defgeneric iso8601-datestamp (d)
+  (:documentation "Given an object that encodes a date
+     return an iso8601-datestamp representation of it")
+  (:method (d)
+    (typecase d
+      ((or clsql-sys:wall-time clsql-sys:date)
+       (format nil "~4,'0D~A~2,'0D~A~2,'0D"
+               (date-year d) *iso8601-date-separator* (date-month d)
+               *iso8601-date-separator* (date-day d)))
+      ((or string integer) (iso8601-datestamp (convert-to-clsql-datetime d)))
+      (null nil))))
 
-(defmethod iso8601-timestamp (d)
-  "CLSQL has a function (I wrote) to do this, but I wanted more flexibility in output
+(defgeneric iso8601-timestamp (d)
+  (:documentation
+   "CLSQL has a function (I wrote) to do this, but I wanted more flexibility in output
    so that I could use this in more situations
 
    clsql:iso-timestamp is used only to write to database backends, so a very strict ISO
      is fine
-   "
-  (typecase d
-    ((or clsql-sys:wall-time clsql-sys:date string integer)
-     (multiple-value-bind (usec second minute hour day month year)
-         (clsql-sys:decode-time (convert-to-clsql-datetime d))
-       ;; oh yeah, we love recursive format processing
-       ;; http://www.lispworks.com/documentation/HyperSpec/Body/22_cgf.htm
-       (apply
-        #'format nil "~4,'0D~A~2,'0D~A~2,'0D~A~2,'0D~a~2,'0D~A~2,'0D~?~?"
-        (nconc
-         (list year *iso8601-date-separator* month
-               *iso8601-date-separator* day
-               *iso8601-date-time-separator*
-               hour *iso8601-time-separator*
-               minute *iso8601-time-separator*
-               second)
-         (if *iso8601-microseconds*
-             (list ".~6,'0D" (list usec))
-             (list "" ()))
-         (cond
-           ((eql *iso8601-timezone* T) (list "~A" (list 'Z)))
-           ((stringp *iso8601-timezone*) (list "~A" (list *iso8601-timezone*)))
-           (T (list "" ())))))))
-    (null nil)))
+   ")
+  (:method (d)
+    (typecase d
+      ((or clsql-sys:wall-time clsql-sys:date string integer)
+       (multiple-value-bind (usec second minute hour day month year)
+           (clsql-sys:decode-time (convert-to-clsql-datetime d))
+         ;; oh yeah, we love recursive format processing
+         ;; http://www.lispworks.com/documentation/HyperSpec/Body/22_cgf.htm
+         (apply
+          #'format nil "~4,'0D~A~2,'0D~A~2,'0D~A~2,'0D~a~2,'0D~A~2,'0D~?~?"
+          (nconc
+           (list year *iso8601-date-separator* month
+                 *iso8601-date-separator* day
+                 *iso8601-date-time-separator*
+                 hour *iso8601-time-separator*
+                 minute *iso8601-time-separator*
+                 second)
+           (if *iso8601-microseconds*
+               (list ".~6,'0D" (list usec))
+               (list "" ()))
+           (cond
+             ((eql *iso8601-timezone* T) (list "~A" (list 'Z)))
+             ((stringp *iso8601-timezone*) (list "~A" (list *iso8601-timezone*)))
+             (T (list "" ())))))))
+      (null nil))))
 
 (defparameter +date-sep+ "(?:/|-|\\.|:)")
 
@@ -196,28 +208,32 @@
 (defparameter +iso-8601-ish-regex+
   (cl-ppcre:create-scanner +iso-8601-ish-regex-string+ :case-insensitive-mode t))
 
-(defmethod convert-to-clsql-datetime (val )
-  "Converts a string timestamp into a clsql date time object
-   Makes every possible effort to understand your date that will invariably be in some format it wont understand."
-  (macrolet ((regex-date-to-clsql-date ()
-	       "Pretty fugly variable capture, but what are you gonna do.
+(defgeneric convert-to-clsql-datetime (val)
+  (:documentation
+   "Converts a string timestamp into a clsql date time object
+
+    Makes every possible effort to understand your date that will invariably
+    be in some format it wont understand.")
+  (:method (val)
+    (macrolet ((regex-date-to-clsql-date ()
+                 "Pretty fugly variable capture, but what are you gonna do.
                 I have the exact same code twice with like 6 vars to pass"
-	       `(let ((hour (if (and h (< h 12)
-				     (string-equal am/pm "PM"))
-				(+ 12 h)
-				h))
-		      (year (and y
-				 (cond
-				   ((< y 50) (+ y 2000))
-				   ((< y 100) (+ y 1900))
-				   (T y)))))
-		  (clsql:make-time :year year :month mon :day d
-				   :hour (or hour 0) :minute (or m 0) :second (or s 0)))))
-    (typecase val
-      (clsql:date (clsql-sys::date->time val))
-      (clsql:wall-time val)
-      (integer (clsql-sys::utime->time val))
-      (string
+                 `(let ((hour (if (and h (< h 12)
+                                       (string-equal am/pm "PM"))
+                                  (+ 12 h)
+                                  h))
+                        (year (and y
+                               (cond
+                                 ((< y 50) (+ y 2000))
+                                 ((< y 100) (+ y 1900))
+                                 (T y)))))
+                   (clsql:make-time :year year :month mon :day d
+                                    :hour (or hour 0) :minute (or m 0) :second (or s 0)))))
+      (typecase val
+        (clsql:date (clsql-sys::date->time val))
+        (clsql:wall-time val)
+        (integer (clsql-sys::utime->time val))
+        (string
 	 (or ; as best I can tell these just suck
              ;(ignore-errors (clsql-sys:parse-date-time val))
 	     ;(ignore-errors (clsql-sys:parse-timestring val))
@@ -227,19 +243,21 @@
 	     (cl-ppcre:register-groups-bind ((#'parse-integer y mon d h m s) am/pm)
 		 (+iso-8601-ish-regex+ val)
 	       (regex-date-to-clsql-date)
-	       ))))))
+	       )))))))
 
 (defmacro convert-to-clsql-datetime! (&rest places)
   `(setf ,@(iter (for p in places)
              (collect p)
              (collect `(convert-to-clsql-datetime ,p)))))
 
-(defmethod convert-to-clsql-date (val)
-  (typecase val
-    (null nil)
-    (clsql:date val)
-    (clsql-sys::wall-time (clsql-sys::time->date val))
-    (t (convert-to-clsql-date (convert-to-clsql-datetime val)))))
+(defgeneric convert-to-clsql-date (val)
+  (:documentation "Convert your value into a clsql:date structure")
+  (:method (val)
+    (typecase val
+      (null nil)
+      (clsql:date val)
+      (clsql-sys::wall-time (clsql-sys::time->date val))
+      (t (convert-to-clsql-date (convert-to-clsql-datetime val))))))
 
 (defmacro convert-to-clsql-date! (&rest places)
   `(setf ,@(iter (for p in places)

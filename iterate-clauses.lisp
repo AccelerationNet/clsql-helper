@@ -19,22 +19,25 @@
 ;;;; BEWARE These are largely the same (COPY/PASTA) and I have tried to comment the differences
 ;;;; because of all the macrology I couldnt quite figure out how to abstract it
 
-(defmethod  %coerce-to-step (step)
-  (etypecase step
-    (clsql-sys:duration step)
-    (keyword (ecase step
-               (:second +a-second+)
-               (:minute +a-minute+)
-               (:hour +an-hour+)
-               (:day +a-day+)
-               (:month +a-month+)
-               (:year +a-year+)
-               (:negative-second +a-negative-second+)
-               (:negative-minute +a-negative-minute+)
-               (:negative-hour +a-negative-hour+)
-               (:negative-day +a-negative-day+)
-               (:negative-month +a-negative-month+)
-               (:negative-year +a-negative-year+)))))
+(defgeneric  %coerce-to-step (step)
+  (:documentation "Converts something in an iterate date iteration clause BY
+  section to a valid clsql:duration if it can ")
+  (:method (step)
+    (etypecase step
+      (clsql-sys:duration step)
+      (keyword (ecase step
+                 (:second +a-second+)
+                 (:minute +a-minute+)
+                 (:hour +an-hour+)
+                 (:day +a-day+)
+                 (:month +a-month+)
+                 (:year +a-year+)
+                 (:negative-second +a-negative-second+)
+                 (:negative-minute +a-negative-minute+)
+                 (:negative-hour +a-negative-hour+)
+                 (:negative-day +a-negative-day+)
+                 (:negative-month +a-negative-month+)
+                 (:negative-year +a-negative-year+))))))
 
 (iterate::defclause-driver
     (FOR date FROM-DATE start &optional BY (step '+a-day+) )

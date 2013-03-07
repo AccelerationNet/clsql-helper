@@ -73,31 +73,36 @@ post-connect-fn: a function of no arguments to run after opening the connection 
   (equalp (coerce-connection-spec c1)
           (coerce-connection-spec c2)))
 
-(defmacro with-a-database ((&optional (connection-settings *connection-settings*)
+(defun %with-a-database (body-fn &key ((:connection-settings *connection-settings*)
+                                       *connection-settings*)
+                                 post-connect-fn log)
+  "If a database connection exists and it matches the passed in settings or
+   the passed in settings are null, use it!, otherwise aquire a new database
+   connection"
+  ;; handle logging here so that whether or not we get a new db connection
+  ;; we get a logger if needed
+  (flet ((db-fn () (%call-perhaps-logged body-fn log)))
+    ;; if we've got an open connection with the same spec, reuse it
+    (cond ((same-database-connection? *connection-settings* clsql-sys:*default-database*)
+           (db-fn))
+          ((and (null *connection-settings*) clsql-sys:*default-database*)
+           (db-fn))
+          ((and (null *connection-settings*) (null clsql-sys:*default-database*))
+           (error "No database connection available, please provide a clsql::*default-database*"))
+          (t (with-database-function
+               #'db-fn *connection-settings*
+               :post-connect-fn post-connect-fn)))))
+
+(defmacro with-a-database ((&optional (connection-settings '*connection-settings*)
                             &key post-connect-fn log)
                            &body body)
 
   "If a database connection exists and it matches the passed in settings or
    the passed in settings are null, use it!, otherwise aquire a new database
    connection"
-  (alexandria:with-unique-names (db-fn connection-settings-sym)
-    ;; handle logging here so that whether or not we get a new db connection
-    ;; we get a logger if needed
-    `(flet ((,db-fn ()
-             (%call-perhaps-logged (lambda () ,@body) ,log)))
-      (let ((,connection-settings-sym ,connection-settings))
-        ;; if we've got an open connection with the same spec, reuse it
-        (cond ((same-database-connection?
-                ,connection-settings-sym clsql-sys:*default-database*)
-               (,db-fn))
-              ((and (null ,connection-settings-sym)
-                    clsql-sys:*default-database*)
-               (,db-fn))
-              ((and (null ,connection-settings-sym)
-                    (null clsql-sys:*default-database*))
-               (error "No database connection available, please provide a clsql::*default-database*"))
-              (t (with-database-function
-                     #',db-fn ,connection-settings-sym
-                   :post-connect-fn ,post-connect-fn)))))))
+  `(%with-a-database (lambda () ,@body)
+    :connection-settings ,connection-settings
+    :post-connect-fn ,post-connect-fn
+    :log ,log))
 
 

@@ -49,10 +49,11 @@
                   'list)))
 
 (defgeneric migrate (thing)
-  (:documentation "perform the migration")
+  (:documentation "perform the migration, returns the number of statments executed")
   ;; primary method for SQL strings
   (:method ((sql-statement string))
-    (let ((hash (sql-hash sql-statement)))
+    (let ((hash (sql-hash sql-statement))
+          (statement-execution-count 0))
       ;; only process if we haven't done the migration already
       (unless (migration-done-p hash)
         ;; Sometimes we don't care if the query threw an error, add a restart
@@ -62,12 +63,14 @@
         ;; then "CREATE TABLE" migrations will fail cause we already have the
         ;; tables.
         (with-simple-restart (continue "Ignore error, consider this migration done.")
-          (clsql-sys:execute-command sql-statement))
+          (clsql-sys:execute-command sql-statement)
+          (incf statement-execution-count))
         ;; save this migration so we consider it 'done' from now on
         (clsql-sys:insert-records
          :into *migration-table-name*
          :attributes (list [hash] [query] [date-entered])
-         :values (list hash sql-statement (clsql-helper:current-sql-time))))))
+         :values (list hash sql-statement (clsql-helper:current-sql-time))))
+      statement-execution-count))
   ;; if we get a pathname, read it into a string
   (:method ((sql-file pathname))
     (migrate (alexandria:read-file-into-string sql-file)))
@@ -78,9 +81,10 @@
   (:method ((statements list))
     ;; flatten first to support broader input (makes programatically generating
     ;; `sql-statement`s at call sites a little easier.)
-    (mapc #'migrate (alexandria:flatten statements))))
+    (iter (for s in (alexandria:flatten statements))
+      (summing (migrate s)))))
 
-(defun migrations (&rest sql-statements)
+(defmethod migrations (&rest sql-statements)
   "run `sql-statements` on the database once and only once. `sql-statements`
 can be strings, pathnames, or lists."
   (unless clsql-sys:*default-database* (error "must have a database connection open."))

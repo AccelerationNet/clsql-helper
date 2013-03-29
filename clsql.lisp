@@ -199,8 +199,10 @@
                  (undefined-function ())))
     (for kfn-v = (and (compute-applicable-methods kfn (list obj))
                       (funcall kfn obj)))
-    (for v = (or kfn-v (slot-value obj key)))
-    (collecting [= col v] into exprs)
+    (for v = (or kfn-v (and (slot-boundp obj key) (slot-value obj key))))
+    (if v
+        (collecting [= col v] into exprs)
+        (collecting [null col] into exprs))
     (collecting key into keys)
     (finally (return (values (clsql-ands exprs) keys)))))
 

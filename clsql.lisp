@@ -219,7 +219,9 @@
       (not (and (every (lambda (k) (slot-boundp obj k)) keys)
                 (every (lambda (k) (slot-value obj k)) keys)
                 (clsql:select 1
-                  :from (class-name class)
+                  :from (or (ignore-errors
+                             (clsql-sys:view-table class))
+                            (class-name class))
                   :flatp T
                   :limit 1
                   :where (primary-key-where-clauses obj)))))))

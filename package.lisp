@@ -27,6 +27,7 @@
    #:first-of-the-month
    #:first-of-the-month?
    #:last-of-the-month
+   #:last-of-the-month?
    #:first-of-next-month
    #:next-month
    #:last-month

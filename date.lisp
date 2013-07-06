@@ -245,6 +245,14 @@
     (while (eql month (clsql-helper:date-month date)))
     (finally (return yesterday))))
 
+(defun last-of-the-month? (start-date)
+  "Returns T if its the last day of the month"
+  (convert-to-clsql-date! start-date)
+  (not (eql
+        (clsql-helper:date-month start-date)
+        (clsql-helper:date-month
+         (clsql-sys:date+ start-date +a-day+)))))
+
 (defun first-of-the-month (&optional (date (clsql-helper:current-sql-date)))
   "returns the first of the month for the month/year of the date passed in"
   (convert-to-clsql-date! date)

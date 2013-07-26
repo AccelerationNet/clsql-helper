@@ -7,6 +7,11 @@
    (old-value :accessor old-value :initarg :old-value :initform nil)
    (new-value :accessor new-value :initarg :new-value :initform nil)))
 
+(defmethod print-object ((o dirty-slot) s)
+  "Print the auto-print-items for this instance."
+  (print-unreadable-object (o s :type t :identity t)
+    (ignore-errors (format s "~A" (slot-name o)))))
+
 (defun make-dirty-slot (name old new)
   (make-instance 'dirty-slot :slot-name name :old-value old :new-value new))
 
@@ -16,6 +21,14 @@
    (dirty-test :accessor dirty-test :initarg :dirty-test :initform `((T . ,#'equalp))
                :db-kind :virtual))
   (:metaclass clsql-sys::standard-db-class))
+
+(defmethod initialize-instance :after ((o dirty-db-slots-mixin)
+                                       &key &allow-other-keys)
+  ;; lets reset any changes caused by initialization
+  ;; Not sure if this is correct, but other mixins are setting
+  ;; values during init, which are not particularly dirty
+  ;; (ie they havent changed, just got set)
+  (reset-dirty o))
 
 (defun find-dirty-test ( o slot-name )
   (or

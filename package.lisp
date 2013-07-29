@@ -53,7 +53,7 @@
 
    ;; rest
    #:join-slot?
-   #:clsql-get-val #:clsql-exp #:db-string
+   #:clsql-get-val #:clsql-exp #:db-string #:list-of-db-strings
    #:clsql-ands #:clsql-and
    #:clsql-ors #:clsql-or
    #:clsql-column-name

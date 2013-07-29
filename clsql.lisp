@@ -81,6 +81,13 @@
     (when s
       #?"'${prefix}${wrapper}${(clsql-sys:sql-escape-quotes s)}${wrapper}${postfix}'")))
 
+(defun list-of-db-strings (list)
+  "For use in creating `column IN (${stuff})` type of clauses"
+  (when list
+    (collectors:with-string-builder-output (out :delimiter ", ")
+      (iter (for i in (alexandria:ensure-list list))
+        (out (db-string i))))))
+
 (defun %clsql-subclauses (clauses)
   (iter (for c in clauses)
     (when c

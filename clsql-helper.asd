@@ -22,7 +22,7 @@
                (:file "migrations"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria
-                :md5 :access))
+                :md5 :access :collectors))
 
 (defsystem :clsql-helper-test
   :description "Tests for a library providing a clutch of utilities to make

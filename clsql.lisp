@@ -399,7 +399,7 @@
       (for o = (make-instance class))
       (iter (for c in columns)
         (for d in row)
-        (for setter = `(setf ,c))
+        (for setter = (fdefinition `(setf ,c)))
         (for fn = (compute-applicable-methods setter (list d o)))
         (when fn (funcall setter d o)))
       (collect o)))

@@ -58,6 +58,8 @@
    #:clsql-ors #:clsql-or
    #:clsql-column-name
    #:by-id #:by-col
+   #:primary-key-slots
+   #:primary-key-column-names
    #:primary-key-slot-names #:primary-key-where-clauses
    #:db-eql #:new-object-p #:save-failed
    #:pretty-print-sql

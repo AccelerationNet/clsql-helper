@@ -173,11 +173,13 @@
              :flatp T))))
 
 (defun primary-key-slots (obj)
-  (clsql-sys::key-slots
-   (typecase obj
-     (symbol (find-class obj))
-     (clsql-sys::standard-db-class obj)
-     (clsql-sys:standard-db-object (class-of obj)))))
+  (clsql-sys::key-slots (access:class-of-object obj)))
+
+(defun primary-key-column-names (obj)
+  (iter (for slot in (primary-key-slots obj))
+    (collect
+        (or (access:access slot 'clsql-sys::column)
+            (closer-mop:slot-definition-name slot)))))
 
 (defun primary-key-slot-names (obj)
   (mapcar #'c2mop:slot-definition-name

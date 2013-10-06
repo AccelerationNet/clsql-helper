@@ -21,8 +21,10 @@
   (unless (clsql-sys:table-exists-p *migration-table-name*)
     (clsql-sys:create-table
      *migration-table-name*
-     ;; hash of our query
-     `(([hash] string :not-null :unique)
+     ;; hash of our query - not unique because we may wish to rerun
+     ;; migrations occasionally and it doesnt hurt to have multiple hashes
+     ;; partly migrations give a record of who did what when
+     `(([hash] string :not-null)
        ;; the actual query
        ([query] string
 		;; specify the underlying db type, supports SQL Server 2005+ and Postgresql
@@ -33,29 +35,59 @@
        ;; when we migrated it
        ([date-entered] clsql-sys:wall-time :not-null)))))
 
-(defun migration-done-p (hash)
+(defun %migration-done-p (hash)
   "returns non-nil if this hashed migration has been run"
-  (clsql:select [date-entered] :from *migration-table-name*
-                :where [= [hash] hash]
-                :flatp T))
+  (with-a-database ()
+    (clsql:select [date-entered] :from *migration-table-name*
+                  :where [= [hash] hash]
+                  :flatp T)))
 
-(defun sql-hash (sql-statement)
+(defun md5-string (string)
+  (let* ((chars #(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9 #\a #\b #\c #\d #\e #\f))
+         (vec (md5:md5sum-string string))
+         (s (make-string (* 2 (length vec)) :initial-element #\0))
+         (i 0))
+    (iter (for c in-vector vec)
+      (setf (char s i) (aref chars (ldb (byte 4 4) c)))
+      (incf i)
+      (setf (char s i) (aref chars (ldb (byte 4 0) c)))
+      (incf i))
+    s))
+
+(defun %sql-hash (sql-statement)
   "returns a hashed form of the query, as a string"
   ;;`md5sum-sequence` returns a vector of bytes, convert it to a hex string
-  (format nil "~{~x~}"
-          (coerce (md5:md5sum-string
-                   ;; don't consider whitespace changes relevant
-                   (cl-ppcre:regex-replace-all "\\s" sql-statement ""))
-                  'list)))
+  (md5-string (cl-ppcre:regex-replace-all "\\s" sql-statement "")))
 
-(defgeneric migrate (thing)
+(defclass migration ()
+  ((command :reader command :initarg :command :initform nil)
+   (migration-done-p :reader migration-done-p :initarg :migration-done-p :initform nil)
+   (hash :reader hash :initarg :hash :initform nil)
+   ))
+
+(defmethod initialize-instance :after ((o migration) &key &allow-other-keys)
+  (let ((h (sql-hash (command o))))
+    (setf (slot-value o 'hash) h
+          (slot-value o 'migration-done-p) (%migration-done-p h))))
+
+(defgeneric to-migrations (thing)
+  (:documentation "Recursively turn the input into a list of migrations to be performed")
+  (:method (thing)
+    (etypecase thing
+      (pathname (to-migrations (alexandria:read-file-into-string thing)))
+      (function (to-migrations (funcall thing)))
+      (string (list (make-instance 'migration :command thing)))
+      (list (iter (for s in thing) (appending (to-migrations s)))))))
+
+(defgeneric migrate (thing &key force)
   (:documentation "perform the migration, returns the number of statments executed")
-  ;; primary method for SQL strings
-  (:method ((sql-statement string))
-    (let ((hash (sql-hash sql-statement))
-          (statement-execution-count 0))
-      ;; only process if we haven't done the migration already
-      (unless (migration-done-p hash)
+  (:method ( o &key force)
+    (iter (for m in (to-migrations o))
+      (summing (migrate m :force force))))
+  (:method ((o migration) &key force)
+    ;; primary method for SQL strings
+    (let ((statement-execution-count 0))
+      (when (or force (not (migration-done-p o)))
         ;; Sometimes we don't care if the query threw an error, add a restart
         ;; for that case.
         ;;
@@ -63,30 +95,60 @@
         ;; then "CREATE TABLE" migrations will fail cause we already have the
         ;; tables.
         (with-simple-restart (continue "Ignore error, consider this migration done.")
-          (clsql-sys:execute-command sql-statement)
+          (clsql-sys:execute-command (command o))
           (incf statement-execution-count))
         ;; save this migration so we consider it 'done' from now on
         (clsql-sys:insert-records
          :into *migration-table-name*
          :attributes (list [hash] [query] [date-entered])
-         :values (list hash sql-statement (clsql-helper:current-sql-time))))
-      statement-execution-count))
-  ;; if we get a pathname, read it into a string
-  (:method ((sql-file pathname))
-    (migrate (alexandria:read-file-into-string sql-file)))
-  ;; if we're a function, assume it's generating sql
-  (:method ((fn function))
-    (migrate (funcall fn)))
-  ;; migrate each list item
-  (:method ((statements list))
-    ;; flatten first to support broader input (makes programatically generating
-    ;; `sql-statement`s at call sites a little easier.)
-    (iter (for s in (alexandria:flatten statements))
-      (summing (migrate s)))))
+         :values (list (hash o) (command o) (clsql-helper:current-sql-time))))
+      statement-execution-count)))
+
+(defun %default-migrations ()
+  "These are migrations necessary to making the system work as it upgrades"
+  ;; We calculated migration md5s badly for a while, so insert new ones if we see it broken
+  (ecase (clsql-sys:database-underlying-type clsql-sys:*default-database*)
+    (:mssql
+     ;; drop unique constraint
+     (migrate "ERROR-MANUALLY-drop-unique-constraint-on-clsql_helper_migrations")
+     (migrate
+      "WITH mig AS (
+    SELECT LOWER(hash)h0,
+    SUBSTRING(master.dbo.fn_varbintohexstr(HASHBYTES('MD5', REPLACE(REPLACE(REPLACE(REPLACE(QUERY, ' ','') ,'\r',''),'\n', ''),'\t',''))), 3,32) h1,
+    query, date_entered
+    FROM clsql_helper_migrations
+  ),
+  broken AS (
+    SELECT h0,h1, len(h0) l0, len(h1) l1,  query, date_entered
+    FROM mig
+    WHERE h0 != h1
+  )
+  INSERT INTO clsql_helper_migrations (hash,query,date_entered)
+  (SELECT h1, query, date_entered FROM broken
+   WHERE h1 NOT IN (SELECT hash FROM clsql_helper_migrations))"))
+    (:postgresql
+     (migrate "ALTER TABLE public.clsql_helper_migrations
+        DROP CONSTRAINT clsql_helper_migrations_hash_key CASCADE ")
+     (migrate
+      "WITH mig AS (
+    SELECT LOWER(hash)h0,
+    MD5(REPLACE(REPLACE(REPLACE(REPLACE(QUERY, ' ','') ,e'\r',''),e'\n', ''),e'\t','')) h1,
+    query, date_entered
+    FROM clsql_helper_migrations
+  ),
+  broken AS (
+    SELECT h0,h1, length(h0) l0, length(h1) l1,  query, date_entered
+    FROM mig
+    WHERE h0 != h1
+  )
+  INSERT INTO clsql_helper_migrations (hash, query, date_entered)
+  (SELECT h1, query, date_entered FROM broken
+   WHERE h1 NOT IN (SELECT hash FROM clsql_helper_migrations))"))))
 
 (defmethod migrations (&rest sql-statements)
   "run `sql-statements` on the database once and only once. `sql-statements`
 can be strings, pathnames, or lists."
   (unless clsql-sys:*default-database* (error "must have a database connection open."))
   (ensure-migration-table)
+  (%default-migrations)
   (migrate sql-statements))

@@ -205,8 +205,8 @@
 
 ;; verify that whitespace doesn't matter when generating a hash for migrations
 (define-test migrations/whitespace-in-hash
-  (let ((hash (clsql-helper::sql-hash "A B C")))
-    (assert-equal hash (clsql-helper::sql-hash "A B  C") "more spaces")
-    (assert-equal hash (clsql-helper::sql-hash "A
+  (let ((hash (clsql-helper::%sql-hash "A B C")))
+    (assert-equal hash (clsql-helper::%sql-hash "A B  C") "more spaces")
+    (assert-equal hash (clsql-helper::%sql-hash "A
 B C") "newline")))
 

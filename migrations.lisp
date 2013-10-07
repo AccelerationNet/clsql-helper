@@ -59,6 +59,7 @@
   ;;`md5sum-sequence` returns a vector of bytes, convert it to a hex string
   (md5-string (cl-ppcre:regex-replace-all "\\s" sql-statement "")))
 
+;; considered immutable thus no setters
 (defclass migration ()
   ((command :reader command :initarg :command :initform nil)
    (migration-done-p :reader migration-done-p :initarg :migration-done-p :initform nil)
@@ -66,7 +67,7 @@
    ))
 
 (defmethod initialize-instance :after ((o migration) &key &allow-other-keys)
-  (let ((h (sql-hash (command o))))
+  (let ((h (%sql-hash (command o))))
     (setf (slot-value o 'hash) h
           (slot-value o 'migration-done-p) (%migration-done-p h))))
 

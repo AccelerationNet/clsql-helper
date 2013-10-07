@@ -57,7 +57,8 @@
 (defun %sql-hash (sql-statement)
   "returns a hashed form of the query, as a string"
   ;;`md5sum-sequence` returns a vector of bytes, convert it to a hex string
-  (md5-string (cl-ppcre:regex-replace-all "\\s" sql-statement "")))
+  (let ((q (cl-ppcre:regex-replace-all "\\s" sql-statement "")))
+    (values (md5-string q) q)))
 
 ;; considered immutable thus no setters
 (defclass migration ()
@@ -115,7 +116,7 @@
      (migrate
       "WITH mig AS (
     SELECT LOWER(hash)h0,
-    SUBSTRING(master.dbo.fn_varbintohexstr(HASHBYTES('MD5', REPLACE(REPLACE(REPLACE(REPLACE(QUERY, ' ','') ,'\r',''),'\n', ''),'\t',''))), 3,32) h1,
+    SUBSTRING(master.dbo.fn_varbintohexstr(HASHBYTES('MD5', REPLACE(REPLACE(REPLACE(REPLACE(QUERY, ' ','') ,CHAR(10),''),CHAR(13), ''),CHAR(09),''))), 3,32) h1,
     query, date_entered
     FROM clsql_helper_migrations
   ),
@@ -133,7 +134,7 @@
      (migrate
       "WITH mig AS (
     SELECT LOWER(hash)h0,
-    MD5(REPLACE(REPLACE(REPLACE(REPLACE(QUERY, ' ','') ,e'\r',''),e'\n', ''),e'\t','')) h1,
+    MD5(REPLACE(REPLACE(REPLACE(REPLACE(QUERY, ' ','') ,CHR(10),''),CHR(13), ''),CHR(09),'')) h1,
     query, date_entered
     FROM clsql_helper_migrations
   ),

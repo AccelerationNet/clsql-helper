@@ -88,23 +88,32 @@
       (summing (migrate m :force force))))
   (:method ((o migration) &key force)
     ;; primary method for SQL strings
-    (let ((statement-execution-count 0))
-      (when (or force (not (migration-done-p o)))
-        ;; Sometimes we don't care if the query threw an error, add a restart
-        ;; for that case.
-        ;;
-        ;; For example, If we accidentally blow away the migration table,
-        ;; then "CREATE TABLE" migrations will fail cause we already have the
-        ;; tables.
-        (with-simple-restart (continue "Ignore error, consider this migration done.")
-          (clsql-sys:execute-command (command o))
-          (incf statement-execution-count))
-        ;; save this migration so we consider it 'done' from now on
-        (clsql-sys:insert-records
-         :into *migration-table-name*
-         :attributes (list [hash] [query] [date-entered])
-         :values (list (hash o) (command o) (clsql-helper:current-sql-time))))
-      statement-execution-count)))
+    (flet ((mark ()
+             ;; save this migration so we consider it 'done' from now on
+             (clsql-sys:insert-records
+              :into *migration-table-name*
+              :attributes (list [hash] [query] [date-entered])
+              :values (list (hash o) (command o) (clsql-helper:current-sql-time)))))
+      (let ((statement-execution-count 0))
+        (when (or force (not (migration-done-p o)))
+          ;; Sometimes we don't care if the query threw an error, add a restart
+          ;; for that case.
+          ;;
+          ;; For example, If we accidentally blow away the migration table,
+          ;; then "CREATE TABLE" migrations will fail cause we already have the
+          ;; tables.
+          (restart-case
+              (progn
+                (clsql-sys:execute-command (command o))
+                (incf statement-execution-count)
+                (mark))
+            (continue-and-mark ()
+              :report "Ignore error, consider this migration done."
+              (mark))
+            (continue ()
+              :report "Ignore error, retry migration next time")
+            ))
+        statement-execution-count))))
 
 (defun %default-migrations ()
   "These are migrations necessary to making the system work as it upgrades"

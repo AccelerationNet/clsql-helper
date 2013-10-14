@@ -52,6 +52,7 @@
 
 
    ;; rest
+   #:identity-slot?
    #:join-slot?
    #:clsql-get-val #:clsql-exp #:db-string #:list-of-db-strings
    #:clsql-ands #:clsql-and
@@ -98,6 +99,17 @@
    ;;migration functions
    #:*migration-table-name*
    #:migrations
+
+   ;; db-object
+   #:db-object
+   #:fill-identifier!
+   #:next-identifier-sql
+   #:next-identifier
+   #:slot-db-stored?
+   #:has-db-data-to-store?
+   #:pg-db-object
+   #:mssql-db-object
+   #:sqlite3-db-object
    ))
 
 ;; Put clsql into the features list so that we can

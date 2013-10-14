@@ -508,6 +508,12 @@
            (typep slot-def 'clsql-sys::view-class-effective-slot-definition))
        (eql :join (clsql-sys::view-class-slot-db-kind slot-def))))
 
+(defmethod identity-slot? (slot-def)
+  (and (or (typep slot-def 'clsql-sys::view-class-direct-slot-definition)
+           (typep slot-def 'clsql-sys::view-class-effective-slot-definition))
+       (member :identity (alexandria:ensure-list
+                          (clsql-sys::view-class-slot-db-constraints slot-def)))))
+
 
 ;;;; DB - Manipulation shortcuts
 

@@ -18,6 +18,7 @@
                (:file "connections")
                (:file "date")
                (:file "clsql")
+               (:file "db-object")
                (:file "dirty")
                (:file "migrations"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre

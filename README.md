@@ -11,6 +11,28 @@ A library providing a clutch of utilities to make working with clsql easier
    log-database-query , which uses the clsql printer and allows easily
    recording queries executing on a given connection
  * coersion to/from clsql data types an value
+
+## db-object - class
+
+### Web Thread Safety - through dynamic connection binding
+
+If you def-view-classes inherit from clsql-helper:db-object then they
+will never use stored database connections (from view-database slot)
+and instead will prefer the dynamic *default-database*.
+
+Using with-database/with-a-database then become useful ways to
+interact with clsql in a multithreaded web environment.
+
+### Automatic Primary Key filling
+
+While there is code in clsql to handle filling primary keys, I have
+never quite wrapped my head around it.  Instead if you inherit from
+mssql-db-object or pg-db-object the db-objects will autofill single
+primary keys (from IDENTITY / SERIAL) Primary Key columns.
+
+This is somewhat specific to how we design databases (most all tables
+have a single IDENTITY / SERIAL PK) and might not be applicable to 
+all situations
  
 ## Future
 

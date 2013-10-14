@@ -94,7 +94,7 @@ SCOPE_IDENTITY to fill it. If > 1 key-slot, this won't do anything."
     (:documenation
      "A class that knows how to be threadsafe and fill PK Identifiers in pg-databases")))
 
-(defmethod next-identifier-sql ((obj pg-db-obj) &key database)
+(defmethod next-identifier-sql ((obj pg-db-object) &key database)
   "pull the sequence value for this object's table"
   (declare (ignore database))
   (let ((tbl-name (clsql-sys::unescaped-database-identifier (class-of obj))))
@@ -104,17 +104,17 @@ SCOPE_IDENTITY to fill it. If > 1 key-slot, this won't do anything."
   (defclass mssql-db-object (db-object)
     ()
     (:metaclass clsql-sys::standard-db-class))
-  (defclass clsql:mssql-db-view (db-object)
+  (defclass mssql-db-view (db-object)
     ()
     (:metaclass clsql-sys::standard-db-class)))
 
-(defmethod next-identifier-sql ((obj clsql:mssql-db-object) &key database)
+(defmethod next-identifier-sql ((obj mssql-db-object) &key database)
   "use SCOPE_IDENTITY "
   (declare (ignore database))
   "SELECT SCOPE_IDENTITY()")
 
 (defmethod clsql-sys:update-record-from-slots
-    ((o clsql:mssql-db-view) slots &key &allow-other-keys)
+    ((o mssql-db-view) slots &key &allow-other-keys)
   "By default views shouldn't be updatable, so specialize a method to signal an error."
   (error "MSSQL view ~a is not updatable because it represents a view not a table."
 	 (class-of o)))

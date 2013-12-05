@@ -13,11 +13,17 @@
       strings to date
       numbers to double-float
       symbols to strings
+      bits to booleans
 
    "
   (let ((spec-type (clsql-sys::specified-type slot)))
   (if spec-type
       (cond
+        ((and (subtypep spec-type 'boolean)
+              (typep new '(integer 0 1)))
+         (setf (closer-mop:slot-value-using-class
+                class object slot)
+               (= 1 new)))
         ;; should have been an integer, but got a string
         ((and (subtypep spec-type 'integer)
               (typep new 'string))

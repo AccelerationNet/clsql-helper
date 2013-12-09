@@ -35,7 +35,7 @@
   "fill the id field on the object with the appropriate next-identifier"
   (when key-slots
     (if (= 1 (length key-slots))
-	(let ((key-slot-name (sb-mop:slot-definition-name
+	(let ((key-slot-name (c2mop:slot-definition-name
 			      (first key-slots))))
 	  (unless (and (slot-boundp obj key-slot-name)
 		       (slot-value obj key-slot-name))

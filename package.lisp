@@ -72,6 +72,7 @@
    #:db-query
    #:db-scalar
    #:db-select-scalar
+   #:db-select-first
    #:db-query-plists
    #:db-objs
    #:db-objs-select

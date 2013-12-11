@@ -471,6 +471,10 @@
   (first (apply #'db-query cmd keys)))
 
 (defun db-select-scalar (&rest select-args)
+  (warn "this function is deprecated, and may be removed from future versions. Use db-select-first")
+  (apply #'db-select-first select-args))
+
+(defun db-select-first (&rest select-args)
   "query a single row from the database using clsql:select"
   (access:ensure-arg-list-key-value! 1 :limit select-args)
   (first (apply #'db-select select-args)))

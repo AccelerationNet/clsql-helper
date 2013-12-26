@@ -471,7 +471,7 @@
   (first (apply #'db-query cmd keys)))
 
 (defun db-select-scalar (&rest select-args)
-  (warn "this function is deprecated, and may be removed from future versions. Use db-select-first")
+  (warn "clsql-helper:db-select-scalar function is deprecated, and may be removed from future versions. Use db-select-first")
   (apply #'db-select-first select-args))
 
 (defun db-select-first (&rest select-args)

@@ -1,11 +1,20 @@
 (defpackage :clsql-helper-test
-  (:use :cl :clsql-helper :lisp-unit :iter))
+  (:use :cl :clsql-helper :lisp-unit2 :iter)
+  (:shadow :run-tests))
 
 (in-package :clsql-helper-test)
 (cl-interpol:enable-interpol-syntax)
 (clsql-sys:file-enable-sql-reader-syntax)
 
-(define-test test-clsql-parse-and-print
+(defun run-tests (&key suites tests)
+  (let* ((*package* (find-package :cl-mediawiki-test)))
+    (lisp-unit2:run-tests
+     :tests tests
+     :tags suites
+     :name :cl-mediawiki
+     :run-contexts #'lisp-unit2:with-summary-context)))
+
+(define-test test-clsql-parse-and-print (:tags '(dates))
   (let ((dates
           `(("7/1/2005"
              "07/01/2005 00:00:00" "7/1/2005" "2005-07-01" "2005-07-01 00:00:00")
@@ -56,7 +65,7 @@
       (assert-equal c-iso-time iso-time d)
       (assert-equal c-iso-date iso-date d))))
 
-(define-test test-expression-building
+(define-test test-expression-building (:tags '(expressions))
   (assert-false (clsql-ands ()))
   (assert-false (clsql-and () () ()))
   (assert-false (clsql-and))
@@ -82,7 +91,7 @@
                                       exp
                                       str() ())))))
 
-(define-test test-db-string
+(define-test test-db-string (:tags '(expressions))
   (assert-equal "'a sql ''string'' quoting test'"
       (db-string "a sql 'string' quoting test")))
 
@@ -108,7 +117,7 @@
          (:not-null) :type integer :initarg :id))
  (:default-initargs :VIEW-TABLE "MyTable"))
 
-(define-test test-pkey-stuff
+(define-test test-pkey-stuff (:tags '(keys expressions))
   (assert-equal
       '(id)
       (primary-key-slot-names (make-instance 'pkey-test-1)))
@@ -137,7 +146,7 @@
         (clsql:sql (primary-key-where-clauses pk2)))
     ))
 
-(define-test test-db-eql
+(define-test test-db-eql (:tags '(keys expressions))
   (let ((pk1 (make-instance 'pkey-test-1 :name "russ" :id 1))
         (pk1.2 (make-instance 'pkey-test-1 :name "Bobby" :id 1))
         (pk1.3 (make-instance 'pkey-test-1 :name "Bobby" :id 2))
@@ -149,7 +158,7 @@
     (assert-false (db-eql pk1 pk1.3))
     (assert-false (db-eql pk2 pk1))))
 
-(define-test table-and-column-expressions
+(define-test table-and-column-expressions (:tags '(expressions))
   (assert-equal "\"foo\"" (column-name-string "foo"))
   (assert-equal "FOO" (column-name-string 'foo))
   (assert-equal "\"foo\"" (table-name-string "foo"))
@@ -173,7 +182,7 @@
  (defun sql-log (str &rest args)
    (apply #'format *log* str args))
 
- (define-test log-test
+ (define-test log-test (:tags '(sqlite3))
    (assert-true
        (search
         "
@@ -187,7 +196,7 @@
         :test #'string-equal))
    ))
 
-(define-test clsql-date/times->utime
+(define-test clsql-date/times->utime (:tags '(dates))
   (let ((utime 3542038020))
     (multiple-value-bind (sec min hr date month year day daylight-savings-p zone)
 			  (decode-universal-time utime)
@@ -204,7 +213,7 @@
 			 (clsql-sys:utime->time utime) nil)))))
 
 ;; verify that whitespace doesn't matter when generating a hash for migrations
-(define-test migrations/whitespace-in-hash
+(define-test migrations/whitespace-in-hash (:tags '(migrations))
   (let ((hash (clsql-helper::%sql-hash "A B C")))
     (assert-equal hash (clsql-helper::%sql-hash "A B  C") "more spaces")
     (assert-equal hash (clsql-helper::%sql-hash "A

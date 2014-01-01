@@ -34,7 +34,7 @@
 			:serial t
 			:components ((:file "clsql")
                                      (:file "iterate-clauses"))))
-  :depends-on (:clsql-helper :lisp-unit))
+  :depends-on (:clsql-helper :lisp-unit2))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper))))
   (asdf:load-system :clsql-helper-test)
@@ -45,7 +45,7 @@
     (pushnew :clsql-sqlite3 *features*))
 
   (let ((*package* (find-package :clsql-helper-test)))
-    (eval (read-from-string "(run-tests :all)"))))
+    (eval (read-from-string "(run-tests)"))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 

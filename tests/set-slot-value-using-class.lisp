@@ -46,7 +46,7 @@
            (clsql-sys:varchar 4) :initarg salt))
  (base-table users))
 
-(define-test test-slot-value-coersion
+(define-test test-slot-value-coersion  (:tags '(slot-coercer))
   (let ((u (make-instance 'user)))
     (setf (first-name u) "First" )
     (assert-true (stringp (first-name u)))
@@ -83,4 +83,3 @@
     (assert-true (typep (amount u) 'double-float) (amount u))
     ))
 
-;(run-tests)

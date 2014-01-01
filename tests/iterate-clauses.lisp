@@ -8,7 +8,7 @@
     test-iterate-clauses-date-5 test-iterate-clauses-date-6
     test-iterate-clauses-negative-date test-iterate-clauses-negative-date-2))
 
-(define-test test-iterate-clauses-date
+(define-test test-iterate-clauses-date (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" NIL "4/3/2012" "4/1/2012" "4/5/2012" "4/3/2012")
    (iter
@@ -19,7 +19,7 @@
      (collect (print-nullable-date y))
      )))
 
-(define-test test-iterate-clauses-date-2
+(define-test test-iterate-clauses-date-2 (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" NIL "4/3/2012" "4/1/2012" "4/5/2012" "4/3/2012")
    (iter
@@ -30,7 +30,7 @@
      (collect (print-nullable-date y))
      )))
 
-(define-test test-iterate-clauses-date-3
+(define-test test-iterate-clauses-date-3 (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" NIL "4/3/2012" "4/1/2012" )
    (iter
@@ -41,7 +41,7 @@
      )
    :date-to))
 
-(define-test test-iterate-clauses-date-4
+(define-test test-iterate-clauses-date-4 (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" NIL "4/3/2012" "4/1/2012" )
    (iter
@@ -51,7 +51,7 @@
      (collect (print-nullable-date y))
      )
    :datetime-to))
-(define-test test-iterate-clauses-date-5
+(define-test test-iterate-clauses-date-5 (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" NIL "4/3/2012" "4/1/2012" "4/5/2012" "4/3/2012")
    (iter
@@ -62,7 +62,7 @@
      )
    :date-thru))
 
-(define-test test-iterate-clauses-date-6
+(define-test test-iterate-clauses-date-6 (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" NIL "4/3/2012" "4/1/2012" "4/5/2012" "4/3/2012")
    (iter
@@ -73,7 +73,7 @@
      )
    :datetime-thru))
 
-(define-test test-iterate-clauses-negative-date
+(define-test test-iterate-clauses-negative-date (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" "3/31/2012" "3/30/2012" "3/29/2012" "3/28/2012")
    (iter
@@ -81,7 +81,7 @@
      (collect (print-nullable-date d)))
    :datetime-thru-negative-day))
 
-(define-test test-iterate-clauses-negative-date-2
+(define-test test-iterate-clauses-negative-date-2  (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" "3/1/2012" "2/1/2012")
    (iter
@@ -89,7 +89,7 @@
      (collect (print-nullable-date d)))
    :datetime-thru-negative-month))
 
-(define-test test-iterate-clauses-negative-date-3
+(define-test test-iterate-clauses-negative-date-3  (:tags '(iterate-clauses))
   (assert-equalp
    '("4/1/2012" "3/1/2012" "2/1/2012")
    (iter

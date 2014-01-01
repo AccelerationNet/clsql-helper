@@ -43,7 +43,7 @@
   ;; not really a big deal if it fails, we will just skip a couple of tests
   (when (ignore-errors (asdf:load-system :clsql-sqlite3))
     (pushnew :clsql-sqlite3 *features*))
-  (eval (read-from-string "(run-tests)")))
+  (eval (read-from-string "(clsql-helper-test::run-tests)")))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 

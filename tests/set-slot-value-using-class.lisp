@@ -1,8 +1,16 @@
 (defpackage :clsql-helper-slot-coercer-test
-  (:use :cl :clsql-helper :lisp-unit :iter))
+  (:use :cl :clsql-helper :lisp-unit2 :iter)
+  (:shadow :run-tests))
 
 (in-package :clsql-helper-slot-coercer-test)
 (cl-interpol:enable-interpol-syntax)
+
+(defun run-tests ()
+  (let* ((*package* (find-package :clsql-helper-slot-coercer-test)))
+    (lisp-unit2:run-tests
+     :name :clsql-helper-slot-coercer
+     :package :clsql-helper-slot-coercer-test
+     :run-contexts #'lisp-unit2:with-summary-context)))
 
 (clsql-sys:def-view-class role ()
     ((name :column first_name :accessor name

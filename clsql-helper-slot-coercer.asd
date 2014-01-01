@@ -26,13 +26,13 @@
   :components ((:module :tests
 			:serial t
 			:components ((:file "set-slot-value-using-class"))))
-  :depends-on (:clsql-helper-slot-coercer :lisp-unit))
+  :depends-on (:clsql-helper-slot-coercer :lisp-unit2))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper-slot-coercer))))
   (asdf:load-system :clsql-helper-slot-coercer-test)
   (asdf:test-system :clsql-helper)
   (let ((*package* (find-package :clsql-helper-slot-coercer-test)))
-    (eval (read-from-string "(run-tests :all)"))))
+    (eval (read-from-string "(run-tests)"))))
 
 ;; Copyright (c) 2011 Russ Tyndall , Acceleration.net http://www.acceleration.net
 

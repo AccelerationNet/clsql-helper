@@ -7,11 +7,11 @@
 (clsql-sys:file-enable-sql-reader-syntax)
 
 (defun run-tests (&key suites tests)
-  (let* ((*package* (find-package :cl-mediawiki-test)))
+  (let* ((*package* (find-package :clsql-helper-test)))
     (lisp-unit2:run-tests
      :tests tests
      :tags suites
-     :name :cl-mediawiki
+     :name :clsql-helper
      :run-contexts #'lisp-unit2:with-summary-context)))
 
 (define-test test-clsql-parse-and-print (:tags '(dates))

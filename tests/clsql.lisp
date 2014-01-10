@@ -219,3 +219,45 @@
     (assert-equal hash (clsql-helper::%sql-hash "A
 B C") "newline")))
 
+
+(define-test connection-db-specs (:tags '(connections))
+  (let ((*connection-database* (clsql-helper::new-connection-database)))
+    (add-connection-spec
+     :a '(("/tmp/a.db") :database-type :sqlite3))
+    (add-connection-spec
+     :b '(("/tmp/b.db") :database-type :sqlite3))
+    (add-connection-spec
+     :a '(("/tmp/a2.db") :database-type :sqlite3))
+    (add-connection-spec
+     :c '(("/tmp/c.db") :database-type :sqlite3))
+
+    (assert-equal 3 (length (clsql-helper::names->spec *connection-database*)))
+    (assert-equal '(("/tmp/a2.db") :database-type :sqlite3)
+                  (get-connection-spec :a))
+    (remove-connection-spec :a)
+    (assert-equal 2 (length (clsql-helper::names->spec *connection-database*)))
+    ))
+
+(define-test connect-db-conns (:tags '(connections))
+  (let ((*connection-database* (clsql-helper::new-connection-database)))
+    (add-connection-spec :a '(("/tmp/a.db") :database-type :sqlite3))
+    (add-connection-spec :b '(("/tmp/b.db") :database-type :sqlite3))
+    (add-connection-spec :c '(("/tmp/c.db") :database-type :sqlite3))
+    (flet ((in-db? (name)
+             (cl-ppcre:scan
+              #?"(?i)/tmp/${name}.db"
+              (clsql-sys:database-name clsql-sys:*default-database*))))
+    (with-a-database (:a)
+      (assert-true (in-db? :a))
+      (with-a-database (:b)
+        (assert-true (in-db? :b))
+        (with-a-database (:a)
+          (assert-true (in-db? :a))
+          (with-a-database (:c)
+            (assert-true (in-db? :c))
+            (with-a-database ('(("/tmp/b.db") :database-type :sqlite3))
+              (assert-true (in-db? :b))
+              (assert-equal 3 (length
+                               (clsql-helper::names->conn *connection-database*)))))))))))
+
+

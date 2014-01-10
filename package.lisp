@@ -89,9 +89,16 @@
 
    ;;connection functions
    #:*connection-settings*
+   #:*connection-database*
+   #:new-connection-database
+   #:add-connection-spec
+   #:get-connection-spec
+   #:remove-connection-spec
+   #:find-connection
    #:with-database-function
    #:with-database
    #:with-a-database
+   #:with-a-database-context
 
    #:with-command-logging
    #:*command-log-stream*

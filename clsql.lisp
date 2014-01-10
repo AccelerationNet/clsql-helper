@@ -29,7 +29,15 @@
 (defun default-log-fn (msg)
   (format *trace-output* "~%~A~%" msg))
 
+(defun %log-fn-perhaps (log)
+  (cond ((eql t log) *default-log-fn*)
+        ((null log) nil)
+        ((functionp log) log)
+        ((macro-function log) (compile nil `(lambda (msg) (,log msg))))
+        ((fboundp log) (lambda (msg) (funcall log msg)))))
+
 (defun log-database-command-fn (body-fn &key log-fn (database clsql:*default-database*))
+  (setf log-fn (%log-fn-perhaps log-fn))
   (cond
     (log-fn
      (let* ((record (make-array 60 :fill-pointer 0 :adjustable T :element-type 'base-char)))

@@ -99,6 +99,9 @@
    #:with-database
    #:with-a-database
    #:with-a-database-context
+   #:with-a-transaction
+   #:with-transaction-context
+   #:with-a-transaction-context
 
    #:with-command-logging
    #:*command-log-stream*

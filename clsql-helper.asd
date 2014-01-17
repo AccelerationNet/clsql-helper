@@ -20,7 +20,8 @@
                (:file "clsql")
                (:file "db-object")
                (:file "dirty")
-               (:file "migrations"))
+               (:file "migrations")
+               (:file "recency"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria
                 :md5 :access :collectors))

@@ -159,11 +159,11 @@
 
 (defparameter +date-time-regex+
   (cl-ppcre:create-scanner
-   #?r"^(?:'|\")?(\d{1,2})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{2,4})(?:\s*(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?\s*((?:a|p)m\.?)?)?(?:'|\")?"
+   #?r"^(?:'|\")?(\d{1,2})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{2,4})(?:\s*(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?(?:\.(\d+))?\s*((?:a|p)m\.?)?)?(?:'|\")?"
    :case-insensitive-mode t))
 
 (defparameter +iso-8601-ish-regex-string+
-  #?r"^(?:'|\")?(\d{2,4})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{1,2})(?:(?:\s*|T)(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?\s*((?:a|p)m\.?)?(?:Z|,,0|(?:-|\+)\d{1,2}:?\d{2}?)?)?(?:'|\")?")
+  #?r"^(?:'|\")?(\d{2,4})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{1,2})(?:(?:\s*|T)(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?(?:\.(\d+))?\s*((?:a|p)m\.?)?(?:Z|,,0|(?:-|\+)\d{1,2}:?\d{2}?)?)?(?:'|\")?")
 
 (defparameter +iso-8601-ish-regex+
   (cl-ppcre:create-scanner +iso-8601-ish-regex-string+ :case-insensitive-mode t))
@@ -187,20 +187,27 @@
                                  ((< y 50) (+ y 2000))
                                  ((< y 100) (+ y 1900))
                                  (T y)))))
-                   (clsql:make-time :year year :month mon :day d
-                                    :hour (or hour 0) :minute (or m 0) :second (or s 0)))))
+                   (when (and usec (plusp usec))
+                     (iter (while (<= usec 100000))
+                       (setf usec (* usec 10))))
+                   (clsql:make-time
+                    :year year :month mon :day d
+                    :hour (or hour 0) :minute (or m 0) :second (or s 0)
+                    :usec (or usec 0)))))
       (typecase val
         (clsql:date (clsql-sys::date->time val))
         (clsql:wall-time val)
         (integer (clsql-sys::utime->time val))
         (string
-	 (or ; as best I can tell these just suck
+	 (or                 ; as best I can tell these just suck
              ;(ignore-errors (clsql-sys:parse-date-time val))
 	     ;(ignore-errors (clsql-sys:parse-timestring val))
-	     (cl-ppcre:register-groups-bind ((#'parse-integer mon d y h m s) am/pm)
+	     (cl-ppcre:register-groups-bind
+                 ((#'parse-integer mon d y h m s usec) am/pm)
 		 (+date-time-regex+ val)
 	       (regex-date-to-clsql-date))
-	     (cl-ppcre:register-groups-bind ((#'parse-integer y mon d h m s) am/pm)
+	     (cl-ppcre:register-groups-bind
+                 ((#'parse-integer y mon d h m s usec) am/pm)
 		 (+iso-8601-ish-regex+ val)
 	       (regex-date-to-clsql-date)
 	       )))))))

@@ -183,6 +183,12 @@
 (defun primary-key-slots (obj)
   (clsql-sys::key-slots (access:class-of-object obj)))
 
+(defun primary-key-slot (obj)
+  (first (clsql-sys::key-slots (access:class-of-object obj))))
+
+(defun primary-key-value (obj)
+  (access:access obj (primary-key-slot obj)))
+
 (defun primary-key-column-names (obj)
   (iter (for slot in (primary-key-slots obj))
     (collect

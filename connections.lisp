@@ -88,7 +88,10 @@ post-connect-fn: a function of no arguments to run after opening the connection
   (declare (type function fn) (dynamic-extent fn))
   (let ((name connect-settings)
         (spec (copy-list (get-connection-spec connect-settings))))
-    (destructuring-bind (spec . settings) spec
+    (destructuring-bind (spec . settings)
+        (if (listp (first spec))
+            spec
+            (list spec nil))
       (let ((settings-post-connect (getf settings :post-connect-fn)))
         (setf (getf settings :make-default) nil)
         (remf settings :post-connect-fn)

@@ -99,6 +99,7 @@
    #:find-connection
    #:with-database-function
    #:with-database
+   #:with-database-context
    #:with-a-database
    #:with-a-database-context
    #:with-a-transaction

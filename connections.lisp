@@ -78,16 +78,30 @@
    (equalp (coerce-connection-spec c1) (coerce-connection-spec c2))))
 
 (defun with-database-function (fn connect-settings &key post-connect-fn log)
+  "Alias of with-database-context for backwards compatability
+   Creates a context inside which *default-database* is bound and runs the fn
+   inside it"
+  (warn "clsql-helper:with-database-function is deprecated, please call clsql-helper:with-database-context")
+  (with-database-context fn :connection-settings connect-settings
+    :post-connect-fn post-connect-fn :log log))
+
+(defun with-database-context (body-fn
+                              &key ((:connection-settings *connection-settings*)
+                                    *connection-settings*)
+                              post-connect-fn log
+                              ((:db *connection-database*)
+                               *connection-database*))
   "opens a database connection with the given settings, and runs the function.
 
-connect-settings: a plist of connection info for clsql, also supports :post-connect-fn, a function to run after opening the connection
+   connect-settings: a plist of connection info for clsql, also supports :post-connect-fn, a function to run after opening the connection
 
-post-connect-fn: a function of no arguments to run after opening the connection
+   post-connect-fn: a function of no arguments to run after opening the connection
+
 
 "
-  (declare (type function fn) (dynamic-extent fn))
-  (let ((name connect-settings)
-        (spec (copy-list (get-connection-spec connect-settings))))
+  (declare (type function body-fn) (dynamic-extent body-fn))
+  (let ((name *connection-settings*)
+        (spec (copy-list (get-connection-spec *connection-settings*))))
     (destructuring-bind (spec . settings)
         (if (listp (first spec))
             spec
@@ -99,7 +113,6 @@ post-connect-fn: a function of no arguments to run after opening the connection
         (let ((new-db (apply #'clsql-sys:connect spec settings)))
           (unwind-protect
                (let ((clsql-sys:*default-database* new-db)
-                     (*connection-settings* connect-settings)
                      (*connection-database*
                        (new-connection-database
                         :name name
@@ -107,14 +120,16 @@ post-connect-fn: a function of no arguments to run after opening the connection
                  ;; call post-connect if needed
                  (maybe-call post-connect-fn)
                  (maybe-call settings-post-connect)
-                 (return-from with-database-function
-                   (%call-perhaps-logged fn log)))
+                 (return-from with-database-context
+                   (%call-perhaps-logged body-fn log)))
             (clsql-sys:disconnect :database new-db)))))))
 
-(defun with-a-database-context (body-fn &key ((:connection-settings *connection-settings*)
+(defun with-a-database-context (body-fn &key ((:connection-settings
+                                               *connection-settings*)
                                               *connection-settings*)
                                         post-connect-fn log
-                                        (db *connection-database*)
+                                        ((:db *connection-database*)
+                                         *connection-database*)
                                 &aux existing-connection)
   "If a database connection exists and it matches the passed in settings or
    the passed in settings are null, use it!, otherwise aquire a new database
@@ -129,7 +144,7 @@ post-connect-fn: a function of no arguments to run after opening the connection
            (logged-with-a-database-context-body))
 
           ((setf existing-connection
-                 (find-connection *connection-settings* :db db))
+                 (find-connection *connection-settings*))
            (let ((clsql-sys:*default-database* existing-connection))
              (logged-with-a-database-context-body)))
 
@@ -137,8 +152,9 @@ post-connect-fn: a function of no arguments to run after opening the connection
            (logged-with-a-database-context-body))
           ((and (null *connection-settings*) (null clsql-sys:*default-database*))
            (error "No database connection available, please provide a clsql::*default-database*"))
-          (t (with-database-function #'logged-with-a-database-context-body
-               *connection-settings* :post-connect-fn post-connect-fn)))))
+          (t (with-database-context
+               #'logged-with-a-database-context-body
+               :post-connect-fn post-connect-fn )))))
 
 
 (defmacro with-database ((&optional (connection-settings *connection-settings*)
@@ -151,9 +167,9 @@ connect-settings: a plist of connection info for clsql, also supports :post-conn
 post-connect-fn: a function of no arguments to run after opening the connection "
   `(flet ((with-database-body () ,@body))
     (declare (dynamic-extent #'with-database-body))
-    (with-database-function
+    (with-database-context
       #'with-database-body
-      ,connection-settings
+      :connection-settings ,connection-settings
       :post-connect-fn ,post-connect-fn
       :log ,log)))
 

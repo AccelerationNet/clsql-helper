@@ -37,12 +37,35 @@
   ((instance :accessor instance :initarg :instance :initform nil)
    (history-info :accessor history-info :initarg :history-info :initform nil)))
 
-(defmethod clsql-sys::update-records-from-instance :before ((o recency-mixin) &key database &allow-other-keys)
-  (declare (ignore database))
+(defun %before-update-recency-check (o)
   (let* ((history-info (get-history-info o))
          (most-recent-historic-date
            (convert-to-clsql-datetime
             (first (alexandria:ensure-list history-info)))))
-    (when (and most-recent-historic-date
+    (when (and most-recent-historic-date (%retrieved-at o)
                (clsql-sys::time< (%retrieved-at o) most-recent-historic-date))
       (error 'recency-error :instance o :history-info history-info))))
+
+(defun %after-update-recency-check (o)
+  (setf (%retrieved-at o)
+        (convert-to-clsql-datetime
+         (first (clsql:query "SELECT CURRENT_TIMESTAMP" :flatp t)))))
+
+(defmethod clsql-sys::update-records-from-instance :before ((o recency-mixin) &key database &allow-other-keys)
+  (declare (ignore database))
+  (%before-update-recency-check o))
+
+(defmethod clsql-sys::update-records-from-instance :after ((o recency-mixin) &key database &allow-other-keys)
+  (declare (ignore database))
+  (%after-update-recency-check o))
+
+(defmethod clsql-sys::update-record-from-slots :before ((o recency-mixin) slots &key database &allow-other-keys)
+  (declare (ignore database slots))
+  (%before-update-recency-check o))
+
+(defmethod clsql-sys::update-record-from-slots :after ((o recency-mixin) slots &key database &allow-other-keys)
+  (declare (ignore database slots))
+  (%after-update-recency-check o))
+
+
+

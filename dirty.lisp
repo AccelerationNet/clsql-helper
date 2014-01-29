@@ -45,7 +45,9 @@
          *record-this-dirty-slot* ;; dont record if updating from database
          (slot-boundp object 'dirty-slots)
          (slot-boundp object 'dirty-test)
-         (not (member name '(dirty-slots dirty-test))))
+         (not (member name '(dirty-slots dirty-test)))
+         ;; only db-slots count for this plugin
+         (clsql-sys::key-or-base-slot-p slot))
     (let* ((test-fn (find-dirty-test object name))
            (old (when (slot-boundp object name)
                       (closer-mop:slot-value-using-class class object slot)))
@@ -93,27 +95,29 @@
 
 (defmacro defmethod-when-defined (name args &body body)
   (when (typep (ignore-errors (fdefinition name)) 'standard-generic-function)
-    `(defmethod ,name ,args ,@body)))
-
-(defmethod-when-defined clsql-sys::update-records-from-instance-slots-and-values
-    ((obj dirty-db-slots-mixin) view-class database)
-  "TODO: remove this defunct function, once the oodml refactor branch is merged"
-  (let* ((database (clsql-sys::choose-database-for-instance obj database))
-         (all-slots (if (clsql-sys::normalizedp view-class)
-                        (clsql-sys::ordered-class-direct-slots view-class)
-                        (clsql-sys::ordered-class-slots view-class)))
-         (record-values
-           (loop for s in all-slots
-                 when (and (clsql-sys::%slot-storedp obj s)
-                           (slot-dirty? obj s))
-                 collect (clsql-sys::%slot-value-list obj s database))))
-    record-values))
+    `(handler-case
+      ;; I dont want a broken one of these to cause the whole library to be broken.
+      ;; clsql tends to lag a bit behind clsql-helper
+      (defmethod ,name ,args ,@body)
+      (error (c) (format *error-output* "~%WARNING: !!! ~%~A~%" c)))))
 
 (defmethod-when-defined clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
+  ;; todo: broken for update-instance-from-record and to be removed when clsql catches up
   (let ((classes-and-slots (call-next-method)))
     (iter (for class-and-slots in classes-and-slots)
       (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
                     (when (slot-dirty? object slot-def)
+                      (collect slot-def))))
+      (when defs
+        (setf (clsql-sys::slot-defs class-and-slots) defs)
+        (collect class-and-slots)))))
+
+(defmethod-when-defined clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin)
+                                                                    &key to-database-p)
+  (let ((classes-and-slots (call-next-method)))
+    (iter (for class-and-slots in classes-and-slots)
+      (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
+                    (when (or (not to-database-p) (slot-dirty? object slot-def))
                       (collect slot-def))))
       (when defs
         (setf (clsql-sys::slot-defs class-and-slots) defs)

@@ -186,10 +186,10 @@
                                (cond
                                  ((< y 50) (+ y 2000))
                                  ((< y 100) (+ y 1900))
-                                 (T y)))))
-                   (when (and usec (plusp usec))
-                     (iter (while (<= usec 100000))
-                       (setf usec (* usec 10))))
+                                 (T y))))
+                        (usec (when usec
+                                (* (parse-integer usec)
+                                   (expt 10 (- 6 (length usec)))))))
                    (clsql:make-time
                     :year year :month mon :day d
                     :hour (or hour 0) :minute (or m 0) :second (or s 0)
@@ -199,15 +199,15 @@
         (clsql:wall-time val)
         (integer (clsql-sys::utime->time val))
         (string
-	 (or                 ; as best I can tell these just suck
+	 (or ; as best I can tell these just suck
              ;(ignore-errors (clsql-sys:parse-date-time val))
 	     ;(ignore-errors (clsql-sys:parse-timestring val))
 	     (cl-ppcre:register-groups-bind
-                 ((#'parse-integer mon d y h m s usec) am/pm)
+                 ((#'parse-integer mon d y h m s ) usec am/pm)
 		 (+date-time-regex+ val)
 	       (regex-date-to-clsql-date))
 	     (cl-ppcre:register-groups-bind
-                 ((#'parse-integer y mon d h m s usec) am/pm)
+                 ((#'parse-integer y mon d h m s) usec am/pm)
 		 (+iso-8601-ish-regex+ val)
 	       (regex-date-to-clsql-date)
 	       )))))))

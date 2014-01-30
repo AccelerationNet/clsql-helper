@@ -33,14 +33,13 @@
 (defmethod fill-identifier! (obj &key database
                              &aux (key-slots (clsql-sys::key-slots (class-of obj))))
   "fill the id field on the object with the appropriate next-identifier"
-  (when key-slots
-    (if (= 1 (length key-slots))
-	(let ((key-slot-name (c2mop:slot-definition-name
-			      (first key-slots))))
-	  (unless (and (slot-boundp obj key-slot-name)
-		       (slot-value obj key-slot-name))
-	    (setf (slot-value obj key-slot-name)
-                  (next-identifier obj :database database)))))))
+  (when (= 1 (length key-slots))
+    (let ((key-slot-name (c2mop:slot-definition-name
+                          (first key-slots))))
+      (unless (and (slot-boundp obj key-slot-name)
+                   (slot-value obj key-slot-name))
+        (let ((nid (next-identifier obj :database database)))
+          (setf (slot-value obj key-slot-name) nid))))))
 
 ;;;; We add an after to both primary ways of saving a db-object to the
 ;;;; database they call a common function underneath, but its privatish and it

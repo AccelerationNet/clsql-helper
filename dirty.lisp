@@ -47,7 +47,7 @@
          (slot-boundp object 'dirty-test)
          (not (member name '(dirty-slots dirty-test)))
          ;; only db-slots count for this plugin
-         (clsql-sys::key-or-base-slot-p slot))
+         (eql :base (clsql-sys::view-class-slot-db-kind slot)))
     (let* ((test-fn (find-dirty-test object name))
            (old (when (slot-boundp object name)
                       (closer-mop:slot-value-using-class class object slot)))
@@ -82,6 +82,11 @@
   (let ( *record-this-dirty-slot* )
     (call-next-method)))
 
+(defmethod fill-identifier! :around ((o dirty-db-slots-mixin) &key database)
+  (declare (ignore o database))
+  (let ( *record-this-dirty-slot* )
+    (call-next-method)))
+
 (defmethod clsql-sys:update-instance-from-records :after
     ((o dirty-db-slots-mixin) &key &allow-other-keys)
   (reset-dirty o))
@@ -93,15 +98,19 @@
      (slot closer-mop:standard-effective-slot-definition))
   (%dirty-before new class object slot))
 
-(defmacro defmethod-when-defined (name args &body body)
+(defmacro defmethod-when-possible (name args &body body)
   (when (typep (ignore-errors (fdefinition name)) 'standard-generic-function)
     `(handler-case
       ;; I dont want a broken one of these to cause the whole library to be broken.
       ;; clsql tends to lag a bit behind clsql-helper
       (defmethod ,name ,args ,@body)
-      (error (c) (format *error-output* "~%WARNING: !!! ~%~A~%" c)))))
+      (error (c) (declare (ignorable c))
+       ;; I think it is fine just ignoring the definition that doesnt work instead of
+       ;; complaining
+       (format *error-output* "~%warning skipping method definition: ~%~A~%" c)
+       ))))
 
-(defmethod-when-defined clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
+(defmethod-when-possible clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
   ;; todo: broken for update-instance-from-record and to be removed when clsql catches up
   (let ((classes-and-slots (call-next-method)))
     (iter (for class-and-slots in classes-and-slots)
@@ -112,16 +121,21 @@
         (setf (clsql-sys::slot-defs class-and-slots) defs)
         (collect class-and-slots)))))
 
-(defmethod-when-defined clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin)
+(defmethod-when-possible clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin)
                                                                     &key to-database-p)
   (let ((classes-and-slots (call-next-method)))
-    (iter (for class-and-slots in classes-and-slots)
-      (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
-                    (when (or (not to-database-p) (slot-dirty? object slot-def))
-                      (collect slot-def))))
-      (when defs
-        (setf (clsql-sys::slot-defs class-and-slots) defs)
-        (collect class-and-slots)))))
+    (if (or (null to-database-p)
+            ;; we only filter updates currently (presumably inserts dont have unneeded data)
+            (null (clsql-sys::view-database object)))
+        classes-and-slots
+        (iter (for class-and-slots in classes-and-slots)
+          (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
+                        (when (and (eql :base (clsql-sys::view-class-slot-db-kind slot-def))
+                                   (slot-dirty? object slot-def))
+                          (collect slot-def))))
+          (when defs
+            (setf (clsql-sys::slot-defs class-and-slots) defs)
+            (collect class-and-slots))))))
 
 #| reimplementation for normal classes (different metaclass)
 

@@ -23,12 +23,15 @@
   (:metaclass clsql-sys::standard-db-class))
 
 (defmethod initialize-instance :after ((o dirty-db-slots-mixin)
-                                       &key &allow-other-keys)
-  ;; lets reset any changes caused by initialization
-  ;; Not sure if this is correct, but other mixins are setting
-  ;; values during init, which are not particularly dirty
-  ;; (ie they havent changed, just got set)
-  (reset-dirty o))
+                                       &key &allow-other-keys
+                                       &aux (class (class-of o)))
+  ;; initialize our dirtyness caused by initialization
+  ;; during initialization, our dirty slots might not be initialized
+  ;; till after the rest of initialization
+  (iter (for slot in (clsql::stored-slotdefs o))
+    (for sn = (closer-mop:slot-definition-name slot))
+    (when (slot-boundp o sn)
+      (%dirty-before (slot-value o sn ) class o slot :old-value nil))))
 
 (defun find-dirty-test ( o slot-name )
   (or
@@ -39,18 +42,22 @@
    #'equalp))
 
 (defun %dirty-before (new class object slot
+                      &key (old-value nil old-value-provided)
                       &aux (name (closer-mop:slot-definition-name slot)))
   ;; if its not bound but has an init form, then we are in object creation
   (when (and
-         *record-this-dirty-slot* ;; dont record if updating from database
+         *record-this-dirty-slot*     ;; dont record if updating from database
+         ;; dont do this till we have correctly initialized our own slots
          (slot-boundp object 'dirty-slots)
          (slot-boundp object 'dirty-test)
          (not (member name '(dirty-slots dirty-test)))
          ;; only db-slots count for this plugin
          (eql :base (clsql-sys::view-class-slot-db-kind slot)))
     (let* ((test-fn (find-dirty-test object name))
-           (old (when (slot-boundp object name)
-                      (closer-mop:slot-value-using-class class object slot)))
+           (old (if old-value-provided
+                    old-value
+                    (when (slot-boundp object name)
+                      (closer-mop:slot-value-using-class class object slot))))
            (dirty? (not (funcall test-fn new old))))
       (when dirty?
         (pushnew (make-dirty-slot name old new) (dirty-slots object) :key #'slot-name)))))
@@ -122,12 +129,11 @@
         (collect class-and-slots)))))
 
 (defmethod-when-possible clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin)
-                                                                    &key to-database-p)
+                                                                     &key to-database-p)
   (let ((classes-and-slots (call-next-method)))
-    (if (or (null to-database-p)
-            ;; we only filter updates currently (presumably inserts dont have unneeded data)
-            (null (clsql-sys::view-database object)))
+    (if (null to-database-p)
         classes-and-slots
+        ;; filter for only dirty slots on updating db
         (iter (for class-and-slots in classes-and-slots)
           (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
                         (when (and (eql :base (clsql-sys::view-class-slot-db-kind slot-def))

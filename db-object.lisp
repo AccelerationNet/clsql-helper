@@ -33,13 +33,21 @@
 (defmethod fill-identifier! (obj &key database
                              &aux (key-slots (clsql-sys::key-slots (class-of obj))))
   "fill the id field on the object with the appropriate next-identifier"
+  ;; TODO: this interacts weirdly with the dirty bits stuff (eg: no dirty
+  ;; slots means we might not actually insert), which means we could get a
+  ;; messed up id.  It also seems like this could just interact with the
+  ;; "standard" clsql stuff for this
+
+  ;; TODO: Remove this when new clsql is in quicklisp, the default
+  ;; implementation should handle this now
   (when (= 1 (length key-slots))
     (let ((key-slot-name (c2mop:slot-definition-name
                           (first key-slots))))
       (unless (and (slot-boundp obj key-slot-name)
                    (slot-value obj key-slot-name))
         (let ((nid (next-identifier obj :database database)))
-          (setf (slot-value obj key-slot-name) nid))))))
+          (setf (slot-value obj key-slot-name) nid)))))
+  )
 
 ;;;; We add an after to both primary ways of saving a db-object to the
 ;;;; database they call a common function underneath, but its privatish and it

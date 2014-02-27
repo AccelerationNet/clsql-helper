@@ -46,8 +46,7 @@
       (unless (and (slot-boundp obj key-slot-name)
                    (slot-value obj key-slot-name))
         (let ((nid (next-identifier obj :database database)))
-          (setf (slot-value obj key-slot-name) nid)))))
-  )
+          (setf (slot-value obj key-slot-name) nid))))))
 
 ;;;; We add an after to both primary ways of saving a db-object to the
 ;;;; database they call a common function underneath, but its privatish and it

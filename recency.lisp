@@ -37,19 +37,30 @@
   ((instance :accessor instance :initarg :instance :initform nil)
    (history-info :accessor history-info :initarg :history-info :initform nil)))
 
+(defgeneric validate-recency (o &key history-info %retrieved-at)
+  (:method ((o recency-mixin) &key history-info %retrieved-at)
+    (let* ((history-info (or history-info
+                             (get-history-info o)))
+           (most-recent-historic-date
+             (convert-to-clsql-datetime
+              (first (alexandria:ensure-list history-info))))
+           (%ret (convert-to-clsql-datetime(or %retrieved-at (%retrieved-at o)))))
+      (when (and most-recent-historic-date %ret
+                 (clsql-sys::time< %ret most-recent-historic-date))
+        (error 'recency-error :instance o :history-info history-info)))))
+
 (defun %before-update-recency-check (o)
-  (let* ((history-info (get-history-info o))
-         (most-recent-historic-date
-           (convert-to-clsql-datetime
-            (first (alexandria:ensure-list history-info)))))
-    (when (and most-recent-historic-date (%retrieved-at o)
-               (clsql-sys::time< (%retrieved-at o) most-recent-historic-date))
-      (error 'recency-error :instance o :history-info history-info))))
+  (validate-recency o))
+
+(defun current-timestamp ()
+  (with-a-database ()
+    (convert-to-clsql-datetime
+     (first (clsql:query "SELECT CURRENT_TIMESTAMP" :flatp t)))))
 
 (defun %after-update-recency-check (o)
   (setf (%retrieved-at o)
-        (convert-to-clsql-datetime
-         (first (clsql:query "SELECT CURRENT_TIMESTAMP" :flatp t)))))
+        (current-timestamp)))
+
 
 (defmethod clsql-sys::update-records-from-instance :before ((o recency-mixin) &key database &allow-other-keys)
   (declare (ignore database))

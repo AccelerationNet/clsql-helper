@@ -11,6 +11,12 @@
    #:dirty-slots-mixin
    #:dirty-db-slots-mixin
 
+   ;; recency
+   #:recency-error
+   #:%retrieved-at
+   #:current-timestamp
+   #:recency-mixin
+
 
    ;; date stuff
    #:current-sql-date #:current-sql-time

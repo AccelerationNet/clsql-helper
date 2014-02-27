@@ -52,7 +52,7 @@
          (slot-boundp object 'dirty-test)
          (not (member name '(dirty-slots dirty-test)))
          ;; only db-slots count for this plugin
-         (eql :base (clsql-sys::view-class-slot-db-kind slot)))
+         (member (clsql-sys::view-class-slot-db-kind slot) '(:key :base)))
     (let* ((test-fn (find-dirty-test object name))
            (old (if old-value-provided
                     old-value
@@ -136,7 +136,8 @@
         ;; filter for only dirty slots on updating db
         (iter (for class-and-slots in classes-and-slots)
           (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
-                        (when (and (eql :base (clsql-sys::view-class-slot-db-kind slot-def))
+                        (when (and (member (clsql-sys::view-class-slot-db-kind slot-def)
+                                           '(:key :base))
                                    (slot-dirty? object slot-def))
                           (collect slot-def))))
           (when defs

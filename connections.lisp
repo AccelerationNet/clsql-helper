@@ -85,12 +85,15 @@
   (with-database-context fn :connection-settings connect-settings
     :post-connect-fn post-connect-fn :log log))
 
-(defun with-database-context (body-fn
-                              &key ((:connection-settings *connection-settings*)
-                                    *connection-settings*)
-                              post-connect-fn log
-                              ((:db *connection-database*)
-                               *connection-database*))
+(defun with-database-context
+    (body-fn
+     &key
+     (connection-settings *connection-settings*)
+     (db *connection-database*)
+     post-connect-fn log
+     &aux
+     (*connection-settings* (or connection-settings *connection-settings*))
+     (*connection-database* (or db *connection-database*)))
   "opens a database connection with the given settings, and runs the function.
 
    connect-settings: a plist of connection info for clsql, also supports :post-connect-fn, a function to run after opening the connection
@@ -124,13 +127,14 @@
                    (%call-perhaps-logged body-fn log)))
             (clsql-sys:disconnect :database new-db)))))))
 
-(defun with-a-database-context (body-fn &key ((:connection-settings
-                                               *connection-settings*)
-                                              *connection-settings*)
-                                        post-connect-fn log
-                                        ((:db *connection-database*)
-                                         *connection-database*)
-                                &aux existing-connection)
+(defun with-a-database-context
+    (body-fn &key
+             (connection-settings *connection-settings*)
+             (db *connection-database*)
+             post-connect-fn log
+     &aux existing-connection
+     (*connection-settings* (or connection-settings *connection-settings*))
+     (*connection-database* (or db *connection-database*)))
   "If a database connection exists and it matches the passed in settings or
    the passed in settings are null, use it!, otherwise aquire a new database
    connection"

@@ -34,6 +34,7 @@
 
 (defun get-connection-spec (name-or-spec &key (db *connection-database*))
   (etypecase name-or-spec
+    (null nil)
     (list name-or-spec)
     (t (access:access (names->spec db) name-or-spec :type :alist))))
 
@@ -103,29 +104,33 @@
 
 "
   (declare (type function body-fn) (dynamic-extent body-fn))
-  (let ((name *connection-settings*)
-        (spec (copy-list (get-connection-spec *connection-settings*))))
-    (destructuring-bind (spec . settings)
-        (if (listp (first spec))
-            spec
-            (list spec nil))
-      (let ((settings-post-connect (getf settings :post-connect-fn)))
-        (setf (getf settings :make-default) nil)
-        (remf settings :post-connect-fn)
-        ;; only ever disconnect the database we connect
-        (let ((new-db (apply #'clsql-sys:connect spec settings)))
-          (unwind-protect
-               (let ((clsql-sys:*default-database* new-db)
-                     (*connection-database*
-                       (new-connection-database
-                        :name name
-                        :new-connection new-db)))
-                 ;; call post-connect if needed
-                 (maybe-call post-connect-fn)
-                 (maybe-call settings-post-connect)
-                 (return-from with-database-context
-                   (%call-perhaps-logged body-fn log)))
-            (clsql-sys:disconnect :database new-db)))))))
+  
+  (let* ((name *connection-settings*)
+         (full-spec (copy-list (get-connection-spec *connection-settings*)))
+         spec settings)
+    (unless full-spec (error "No Database connection information"))
+    (cond
+      ((listp (first full-spec))
+       (setf spec (first full-spec)
+             settings (rest full-spec)))
+      (t (setf spec full-spec)))
+    (let ((settings-post-connect (getf settings :post-connect-fn)))
+      (setf (getf settings :make-default) nil)
+      (remf settings :post-connect-fn)
+      ;; only ever disconnect the database we connect
+      (let ((new-db (apply #'clsql-sys:connect spec settings)))
+        (unwind-protect
+             (let ((clsql-sys:*default-database* new-db)
+                   (*connection-database*
+                     (new-connection-database
+                      :name name
+                      :new-connection new-db)))
+               ;; call post-connect if needed
+               (maybe-call post-connect-fn)
+               (maybe-call settings-post-connect)
+               (return-from with-database-context
+                 (%call-perhaps-logged body-fn log)))
+          (clsql-sys:disconnect :database new-db))))))
 
 (defun with-a-database-context
     (body-fn &key

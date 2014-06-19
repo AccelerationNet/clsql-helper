@@ -16,6 +16,10 @@
    #:%retrieved-at
    #:current-timestamp
    #:recency-mixin
+   #:merge-changes
+   #:merge-conflict
+   #:merging-values
+   #:copy-instance
 
 
    ;; date stuff

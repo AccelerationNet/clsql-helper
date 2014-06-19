@@ -542,4 +542,5 @@
 (defun save! (db-obj &key log)
   "saves the given object, then returns the saved object"
   (with-a-database (*connection-settings* :log log)
-    (clsql-sys:update-records-from-instance db-obj)) db-obj)
+    (clsql-sys:update-records-from-instance db-obj))
+  db-obj)

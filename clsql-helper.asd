@@ -21,6 +21,7 @@
                (:file "db-object")
                (:file "dirty")
                (:file "migrations")
+               (:file "merge")
                (:file "recency"))
   :depends-on (:iterate :clsql :closer-mop :cl-ppcre
                 :cl-interpol :symbol-munger :alexandria
@@ -34,7 +35,8 @@
   :components ((:module :tests
 			:serial t
 			:components ((:file "clsql")
-                                     (:file "iterate-clauses"))))
+                                     (:file "iterate-clauses")
+                                     (:file "recency"))))
   :depends-on (:clsql-helper :lisp-unit2))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper))))

@@ -44,7 +44,7 @@
            (most-recent-historic-date
              (convert-to-clsql-datetime
               (first (alexandria:ensure-list history-info))))
-           (%ret (convert-to-clsql-datetime(or %retrieved-at (%retrieved-at o)))))
+           (%ret (convert-to-clsql-datetime (or %retrieved-at (%retrieved-at o)))))
       (when (and most-recent-historic-date %ret
                  (clsql-sys::time< %ret most-recent-historic-date))
         (error 'recency-error :instance o :history-info history-info)))))
@@ -55,7 +55,10 @@
 (defun current-timestamp ()
   (with-a-database ()
     (convert-to-clsql-datetime
-     (first (clsql:query "SELECT CURRENT_TIMESTAMP" :flatp t)))))
+     (first (clsql:query
+             (case (clsql-sys:database-underlying-type clsql-sys:*default-database*)
+               (:sqlite3 "SELECT STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')")
+               (t "SELECT CURRENT_TIMESTAMP")) :flatp t)))))
 
 (defun %after-update-recency-check (o)
   (setf (%retrieved-at o)
@@ -77,6 +80,8 @@
 (defmethod clsql-sys::update-record-from-slots :after ((o recency-mixin) slots &key database &allow-other-keys)
   (declare (ignore database slots))
   (%after-update-recency-check o))
+
+
 
 
 

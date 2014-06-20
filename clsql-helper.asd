@@ -37,7 +37,7 @@
 			:components ((:file "clsql")
                                      (:file "iterate-clauses")
                                      (:file "recency"))))
-  :depends-on (:clsql-helper :lisp-unit2))
+  :depends-on (:clsql-helper :lisp-unit2 :clsql-tests))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper))))
   (asdf:load-system :clsql-helper-test)

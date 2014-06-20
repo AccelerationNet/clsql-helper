@@ -18,6 +18,7 @@
    #:recency-mixin
    #:merge-changes
    #:merge-conflict
+   #:merge-conflicts
    #:merging-values
    #:copy-instance
 
@@ -25,6 +26,7 @@
    ;; date stuff
    #:current-sql-date #:current-sql-time
    #:print-nullable-date #:print-nullable-datetime
+   #:print-timestamp
    #:date-day #:date-year #:date-month
    #:month-string #:month-day-string
    #:convert-to-clsql-date #:convert-to-clsql-datetime

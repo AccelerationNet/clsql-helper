@@ -86,6 +86,17 @@
 	     (format nil "~2,'0d/~2,'0d/~4,'0d ~2,'0d:~2,'0d:~2,'0d"
                      month day year hour minute second)))))))
 
+(defun print-timestamp (field)
+  "if the date exists, prints yyyy-mm-dd hh:mm:ss.uuuuuu"
+  (let ((*print-pretty* nil))
+    (when field
+      (typecase field
+	(string field)
+	(T (multiple-value-bind (usec second minute hour day month year)
+	       (clsql-sys:decode-time (convert-to-clsql-datetime field))
+	     (format nil "~4,'0d-~2,'0d-~2,'0d ~2,'0d:~2,'0d:~2,'0d.~3,'0d"
+                     year month day hour minute second (floor usec 1000))))))))
+
 (defmethod print-object ((o clsql:wall-time) stream)
   (let ((date (print-nullable-datetime o)))
     (if *print-escape*

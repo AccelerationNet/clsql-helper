@@ -84,9 +84,13 @@
 (define-condition merge-conflict (error)
   ((already-saved :accessor already-saved :initarg :already-saved :initform nil
                  :documentation "The object that was saved while we were working")
+   (slot :accessor slot :initarg :slot :initform nil)
    (old-value :accessor old-value :initarg :old-value :initform nil)
    (saved-value :accessor saved-value :initarg :saved-value :initform nil)
    (pending-value :accessor pending-value :initarg :pending-value :initform nil)))
+
+(define-condition merge-conflicts (error)
+  ((conflicts :accessor conflicts :initarg :conflicts :initform nil)))
 
 (defmethod merge-changes (original already-saved pending)
   (let* ((saved-changes (object-diff-list original already-saved))
@@ -101,6 +105,7 @@
                 (unless (object-diff-equals saved-nv nv)
                   (restart-case (error 'merge-conflict
                                        :already-saved already-saved
+                                       :slot slot
                                        :old-value (access:access original slot)
                                        :saved-value saved-nv 
                                        :pending-value nv)

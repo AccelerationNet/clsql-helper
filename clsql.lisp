@@ -539,8 +539,12 @@
 
 ;;;; DB - Manipulation shortcuts
 
-(defun save! (db-obj &key log)
-  "saves the given object, then returns the saved object"
-  (with-a-database (*connection-settings* :log log)
-    (clsql-sys:update-records-from-instance db-obj))
-  db-obj)
+(defgeneric save! (db-obj &key log orignal &allow-other-keys)
+  (:documentation
+   "saves the given object, then returns the saved object")
+  (:method :around (db-obj &key log &allow-other-keys)
+    (with-a-database (*connection-settings* :log log)
+      (call-next-method)))
+  (:method (db-obj &key &allow-other-keys)
+    (clsql-sys:update-records-from-instance db-obj)
+    db-obj))

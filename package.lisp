@@ -109,6 +109,9 @@
    #:get-connection-spec
    #:remove-connection-spec
    #:find-connection
+   #:find-any-connection
+   #:find-active-connection-name
+   #:find-any-active-connection-name
    #:with-database-function
    #:with-database
    #:with-database-context

@@ -38,15 +38,37 @@
     (list name-or-spec)
     (t (access:access (names->spec db) name-or-spec :type :alist))))
 
-(defun find-connection (name &key (db *connection-database*))
+(defun find-connection (name &key ((:db *connection-database*)
+                                        *connection-database*))
   (etypecase name
     ;; find by connection spec
-    (list (iter (for (conn-name . conn) in (names->conn db))
-            (when (same-database-connection? name conn)
-              (return conn))))
+    (list
+     (iter (for (conn-name . conn) in (names->conn *connection-database*))
+       (when (same-database-connection? name conn)
+         (return conn))))
     ;; find by name
-    (symbol (access:access (names->conn db) name :type :alist))
+    (symbol (access:access (names->conn *connection-database*) name :type :alist))
     (clsql-sys:database name)))
+
+(defun find-any-connection (names &key ((:db *connection-database*)
+                                        *connection-database*))
+  (some #'find-connection names))
+
+(defun find-active-connection-name (name &key ((:db *connection-database*)
+                                               *connection-database*))
+  (etypecase name
+    ;; find by connection spec
+    ((or list clsql-sys:database)
+     (iter (for (conn-name . conn) in (names->conn *connection-database*))
+       (when (same-database-connection? name conn)
+         (return conn-name))))
+    ;; find by name
+    (symbol (and (access:access (names->conn *connection-database*) name :type :alist)
+                 name))))
+
+(defun find-any-active-connection-name (names &key ((:db *connection-database*)
+                                                    *connection-database*))
+  (some #'find-active-connection-name names))
 
 (defun maybe-call (it)
   (etypecase it

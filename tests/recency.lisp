@@ -91,8 +91,7 @@
       (setf (date b) (convert-to-clsql-datetime "1/1/2000"))
       (lisp-unit2:assert-signal 'clsql-helper::merging-values
                                 (clsql-helper:merge-changes a a-prime b))
-      ;; already merged
-      (lisp-unit2:assert-no-signal 'clsql-helper::merging-values (clsql-helper:merge-changes a a-prime b))
+
       (lisp-unit2:assert-equalp
        (convert-to-clsql-datetime "1/1/2000")
        (date a-prime))

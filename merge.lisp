@@ -95,6 +95,11 @@
 (defmethod merge-changes (original already-saved pending)
   (let* ((saved-changes (object-diff-list original already-saved))
          (pending-changes (object-diff-list original pending))
+         (merged
+           (iter (for change in saved-changes)
+             (for (slot ov nv) = change)
+             (unless (find slot pending-changes :key #'first)
+               (collect change))))
          (to-save
            (iter (for change in pending-changes)
              (for (slot ov nv) = change)
@@ -114,13 +119,22 @@
                       (collect change))
                     (skip ()
                       :report "Use the already saved value (dont save my value)"))))
-               (t (collect change)))))
-         )
+               (t (collect change))))))
+    (iter (for change in merged)
+      (for (slot ov nv) = change)
+      (with-simple-restart (abort "Skip merging this value")
+        (signal 'merging-values
+                :target already-saved
+                :from ov
+                :slot slot
+                :value nv)))
     (iter (for change in to-save)
       (for (slot ov nv) = change)
       (with-simple-restart (abort "Skip merging this value")
         (signal 'merging-values
-                :target already-saved :from pending
-                :slot slot :value nv)
+                :target already-saved
+                :from ov
+                :slot slot
+                :value nv)
         (setf (access:access already-saved slot) nv)))
     already-saved))

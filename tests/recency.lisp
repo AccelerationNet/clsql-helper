@@ -118,38 +118,6 @@
     (let* ((b (first (clsql-helper:db-select 'recency-test-obj :where [= [id] (id a)])))
            (original (copy-instance b)))
       (setf (value a) 2)
-      (setf (name b) "B-Russ")
-      (sleep .1)      
-      (save! a)
-      (sleep .1)
-      
-      (lisp-unit2:assert-no-error
-       '(or clsql-helper:recency-error
-         clsql-helper:merge-conflict
-         clsql-helper:merge-conflicts)
-       (save! b :original original))
-      
-      ;; b was merged correctly
-      (assert-eql 2 (value b))
-      (assert-equal "B-Russ" (name b))
-
-      (clsql-sys:update-instance-from-records a)
-      ;; db has correct values
-      (assert-eql 2 (value a))
-      (assert-equal "B-Russ" (name a))
-      )))
-
-(lisp-unit2:define-test test-automerging-save (:tags '(recency diff merge)
-                                               :contexts 'with-sqlite3-test-context)
-  (let ((a (make-instance 'recency-test-obj
-                          :name "Russ"
-                          :date (convert-to-clsql-datetime "12/1/2000")
-                          :value 1)))
-    (clsql-helper:save! a)
-    (sleep .1)
-    (let* ((b (first (clsql-helper:db-select 'recency-test-obj :where [= [id] (id a)])))
-           (original (copy-instance b)))
-      (setf (value a) 2)
       (setf (value b) 3
             (name b) "B-Russ")
       (sleep .1)      

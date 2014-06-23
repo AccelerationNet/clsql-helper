@@ -196,7 +196,7 @@
         :test #'string-equal))
    ))
 
-(define-test clsql-date/times->utime (:tags '(dates))
+(define-test clsql-date/times->utime-test (:tags '(dates))
   (let ((utime 3542038020))
     (multiple-value-bind (sec min hr date month year day daylight-savings-p zone)
 			  (decode-universal-time utime)

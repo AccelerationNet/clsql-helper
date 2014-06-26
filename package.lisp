@@ -67,6 +67,7 @@
    #:identity-slot?
    #:join-slot?
    #:clsql-get-val #:clsql-exp #:db-string #:list-of-db-strings
+   #:db-null #:db-null!
    #:clsql-ands #:clsql-and
    #:clsql-ors #:clsql-or
    #:clsql-column-name

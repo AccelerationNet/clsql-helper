@@ -89,6 +89,13 @@
     (when s
       #?"'${prefix}${wrapper}${(clsql-sys:sql-escape-quotes s)}${wrapper}${postfix}'")))
 
+(defun db-null (it)
+  "Returns a value or the string null "
+  (if it it "null"))
+
+(defmacro db-null! (&rest places)
+  `(dolist (p ,places)(setf p (db-null p))))
+
 (defun list-of-db-strings (list)
   "For use in creating `column IN (${stuff})` type of clauses"
   (when list

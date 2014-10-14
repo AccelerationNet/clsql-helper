@@ -1,6 +1,17 @@
 (in-package :clsql-helper)
 (cl-interpol:enable-interpol-syntax)
 
+(defun string-to-boolean (s)
+  "convert a string to a boolean value"
+  (typecase s
+    (list (mapcar #'string-to-boolean s))
+    (string (if
+             (member (trim-and-nullify s)
+                     (list "T" "true" "1" "yes")
+                     :test #'equalp)
+             t nil))
+    (t s)))
+
 (defmethod (setf closer-mop:slot-value-using-class)
     (new
      (class clsql-sys::standard-db-class)
@@ -24,6 +35,10 @@
          (setf (closer-mop:slot-value-using-class
                 class object slot)
                (= 1 new)))
+        ((and (subtypep spec-type 'boolean)
+              (typep new string))
+         (setf (closer-mop:slot-value-using-class class object slot)
+               (string-to-boolean new)))
         ;; should have been an integer, but got a string
         ((and (subtypep spec-type 'integer)
               (typep new 'string))

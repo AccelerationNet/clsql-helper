@@ -36,7 +36,7 @@
                 class object slot)
                (= 1 new)))
         ((and (subtypep spec-type 'boolean)
-              (typep new string))
+              (typep new 'string))
          (setf (closer-mop:slot-value-using-class class object slot)
                (string-to-boolean new)))
         ;; should have been an integer, but got a string

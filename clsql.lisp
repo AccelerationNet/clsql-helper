@@ -390,9 +390,9 @@
     (clsql-sys:wall-time (format stream "'~a'" (clsql-sys:iso-timestring d)))))
 
 (defun get-slot-by-name (name class)
-  (find name (sb-mop:class-direct-slots (find-class class))
+  (find name (closer-mop:class-direct-slots (find-class class))
 	:key (lambda (slot)
-	       (intern (symbol-name (sb-mop:slot-definition-name slot))
+	       (intern (symbol-name (closer-mop:slot-definition-name slot))
 		       *package*))))
 
 (defun coerce-value-to-column-type (class column value)
@@ -422,7 +422,7 @@
       (for o = (make-instance class))
       (iter (for c in columns)
         (for d in row)
-        (setf (slot-value o c) d))
+        (setf (slot-value o c) (coerce-value-to-column-type class c d)))
       (collect o)))
 
 (defun make-instances-setting-accessors (class columns rows)
@@ -434,7 +434,7 @@
         (for d in row)
         (for setter = (fdefinition `(setf ,c)))
         (for fn = (compute-applicable-methods setter (list d o)))
-        (when fn (funcall setter d o)))
+        (when fn (funcall setter (coerce-value-to-column-type class c d) o)))
       (collect o)))
 
 (defun make-instances-setting-access (class columns rows)
@@ -444,7 +444,7 @@
       (for o = (make-instance class))
       (iter (for c in columns)
         (for d in row)
-        (setf (access:access o c) d))
+        (setf (access:access o c) (coerce-value-to-column-type class c d)))
       (collect o)))
 
 ;;;; DB-SELECTION Shortcuts

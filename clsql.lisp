@@ -389,20 +389,30 @@
     (clsql-sys:date (format stream "'~a'" (iso8601-datestamp d)))
     (clsql-sys:wall-time (format stream "'~a'" (clsql-sys:iso-timestring d)))))
 
+(defun get-slot-by-name (name class)
+  (find name (closer-mop:class-direct-slots (find-class class))
+	:key (lambda (slot)
+	       (intern (symbol-name (closer-mop:slot-definition-name slot))
+		       *package*))))
+
+(defun coerce-value-to-column-type (class column value)
+  (let ((type (clsql-sys::specified-type (get-slot-by-name column class))))
+    (coerce-value-to-db-type value type)))
+
 ;;;; Object Creation shortcuts
-(defun make-instance-plist (columns row)
+(defun make-instance-plist (class columns row)
   "Creates a plist intended to be passed to make-instance"
   (iter (for c in columns)
     (for data in row)
     (collect (symbol-munger:underscores->keyword c))
-    (collect data)))
+    (collect (coerce-value-to-column-type class c data))))
 
 (defun make-instances (class columns rows)
   "From N rows and some column-names make N instances of class filling data from rows
    using make instance"
   (iter (for row in rows)
       (for o = (apply #'make-instance class
-                      (make-instance-plist columns row)))
+                      (make-instance-plist class columns row)))
       (collect o)))
 
 (defun make-instances-setting-slot-values (class columns rows)
@@ -412,7 +422,7 @@
       (for o = (make-instance class))
       (iter (for c in columns)
         (for d in row)
-        (setf (slot-value o c) d))
+        (setf (slot-value o c) (coerce-value-to-column-type class c d)))
       (collect o)))
 
 (defun make-instances-setting-accessors (class columns rows)
@@ -424,7 +434,7 @@
         (for d in row)
         (for setter = (fdefinition `(setf ,c)))
         (for fn = (compute-applicable-methods setter (list d o)))
-        (when fn (funcall setter d o)))
+        (when fn (funcall setter (coerce-value-to-column-type class c d) o)))
       (collect o)))
 
 (defun make-instances-setting-access (class columns rows)
@@ -434,7 +444,7 @@
       (for o = (make-instance class))
       (iter (for c in columns)
         (for d in row)
-        (setf (access:access o c) d))
+        (setf (access:access o c) (coerce-value-to-column-type class c d)))
       (collect o)))
 
 ;;;; DB-SELECTION Shortcuts

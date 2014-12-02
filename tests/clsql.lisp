@@ -194,7 +194,9 @@
             (log-database-command (sql-log)
               (clsql:query "SELECT id, name FROM test WHERE ID=1"))))
         :test #'string-equal))
-   ))
+   )
+ 
+ )
 
 (define-test clsql-date/times->utime-test (:tags '(dates))
   (let ((utime 3542038020))

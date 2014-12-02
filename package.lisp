@@ -1,6 +1,7 @@
 (cl:defpackage :clsql-helper
   (:use :cl :cl-user :iter)
   (:export
+   #:type-coercion-error
    ;; dirty
    #:dirty-slots
    #:slot-dirty?

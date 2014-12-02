@@ -350,31 +350,95 @@
          (:mssql "smalldatetime")))
       )))
 
-(defun coerce-value-to-db-type (val db-type)
+(defun string-to-boolean (s)
+  "convert a string to a boolean value"
+  (typecase s
+    (list (mapcar #'string-to-boolean s))
+    (string (if
+             (member (trim-and-nullify s)
+                     (list "T" "true" "1" "yes" "y")
+                     :test #'equalp)
+             t nil))
+    (t s)))
+
+(define-condition type-coercion-error (error)
+  ((val :accessor val :initarg :val :initform nil)
+   (to-type :accessor to-type :initarg :to-type :initform nil)
+   (message :accessor message :initarg :message :initform nil))
+  (:report (lambda (c s) (format s "Cant coerce val:~A to db-type:~A"
+                            (val c) (to-type c)))))
+
+(defun type-coercion-error (val to-type)
+  (restart-case (error 'type-coercion-error :val val :to-type to-type)
+    (use-value (new-val) (values new-val t))
+    (continue () val)))
+
+(defmethod coerce-value-to-db-type (val db-type)
+  "Coerces a value to the correct db-type
+
+   if the conversion fails signals a continueable type-coercion-error
+   (use-value is also available)
+
+   returns  (values val coerced?)
+     the coerced value and whether or not a coersion took place
+  "
   (cond
-    ((subtypep db-type 'clsql-sys:varchar)
-     (trim-and-nullify (princ-to-string val)))
+    ((or (null val) (null db-type)) val)
+    
+    ((subtypep db-type 'string)
+     (typecase val
+       (string val)
+       (t (values
+           (trim-and-nullify (princ-to-string val))
+           t))))
+    
     ((subtypep db-type 'integer)
-     (etypecase val
-       (string (parse-integer val))
-       (integer val)))
+     (typecase val
+       (string (values (parse-integer val) t))
+       (integer val)
+       (t (type-coercion-error val db-type))))
+
     ((subtypep db-type 'double-float)
-     (etypecase val
-       (string (relaxed-parse-float val))
-       (number val)))
+     (typecase val
+       (double-float val)
+       (number (values (float val 0.0d0) t))
+       (string (values (relaxed-parse-float val) t))
+       (t (type-coercion-error val db-type))))
+    
+    ((subtypep db-type 'float)
+     (typecase val
+       (float val)
+       (number (values (float val 0.0) t))
+       (string (values (relaxed-parse-float val) t))
+       (t (type-coercion-error val db-type))))
+    
     ((subtypep db-type 'number)
-     (etypecase val
-       (string (relaxed-parse-float val))
-       (number val)))
-    ((subtypep db-type 'clsql:date) (convert-to-clsql-date val))
-    ((subtypep db-type 'clsql:wall-time ) (convert-to-clsql-datetime val))
+     (typecase val
+       (number val)
+       (string (values (relaxed-parse-float val) t))
+       (t (type-coercion-error val db-type))))
+    
+    ((subtypep db-type 'clsql:date)
+     (typecase val
+       (clsql:date val)
+       (t (alexandria:if-let ((it (convert-to-clsql-date val)))
+            (values it t)
+            (type-coercion-error val 'clsql:date)))))
+    
+    ((subtypep db-type 'clsql:wall-time )
+     (typecase val
+       (clsql:wall-time val)
+       (t (alexandria:if-let ((it (convert-to-clsql-datetime val)))
+            (values it t)
+            (type-coercion-error val 'clsql:wall-time)))))
+    
     ((subtypep db-type 'boolean)
      (typecase val
-       (string (not (null (member val (list "T" "true" "1" "y" "yes") :test #'string-equal))))
+       (integer (values (not (zerop val)) t))
+       (string (values (string-to-boolean val) t))
        (T val)))
-    ((subtypep db-type 'clsql-sys:duration )
-     (error "NO COERCION IMPLEMENTED"))
-    (T (error "NO COERCION IMPLEMENTED"))))
+    
+    (T (type-coercion-error val db-type))))
 
 (defun format-value-for-database (d &optional stream)
   "prints a correctly sql escaped value for postgres"
@@ -401,9 +465,9 @@
   "From N rows and some column-names make N instances of class filling data from rows
    using make instance"
   (iter (for row in rows)
-      (for o = (apply #'make-instance class
-                      (make-instance-plist columns row)))
-      (collect o)))
+    (for o = (apply #'make-instance class
+                    (make-instance-plist columns row)))
+    (collect o)))
 
 (defun make-instances-setting-slot-values (class columns rows)
   "From N rows and column-name make N instances of class filling data from rows
@@ -514,8 +578,19 @@
       (collect (symbol-munger:underscores->keyword k))
       (collect v))))
 
+(defun %coerce-rows
+    (class slot-names rows
+     &aux (types (iter (for s in slot-names)
+                   (collect (access:access
+                             (access:class-slot-by-name class s)
+                             #'clsql-sys::specified-type)))))
+  (iter (for row in rows)
+    (collect (iter (for d in row)
+               (for type in types)
+               (collect (coerce-value-to-db-type d type))))))
+
 (defun db-objs (class cmd &key params (make-instances-fn #'make-instances)
-                          log
+                          log (coerce-rows? t)
                           (column-munger #'symbol-munger:underscores->lisp-symbol))
   "retrieve objects of type class from the database using db-query
 
@@ -526,6 +601,7 @@
          ;; intern in the package expected
          (*package* (find-package (symbol-package class)))
          (fields (mapcar column-munger fields)))
+    (when coerce-rows? (setf rows (%coerce-rows class fields rows)))
     (funcall make-instances-fn class fields rows)))
 
 (defun db-objs-select (class columns &key select-args (make-instances-fn #'make-instances))

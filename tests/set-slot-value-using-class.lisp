@@ -64,14 +64,15 @@
     (assert-true (typep (role-id u) 'integer))
 
     (setf (date-entered u) "7/7/1977 11:43:26.123456")
-    (assert-true (typep (date-entered u) 'clsql-sys:wall-time) (date-entered u))
+    (assert-true (typep (date-entered u) 'clsql-sys:wall-time) (date-entered u) :checked-string)
+    
     (setf (date-entered u) (convert-to-clsql-date "7/7/1977 11:43:26.123456"))
-    (assert-true (typep (date-entered u) 'clsql-sys:wall-time) (date-entered u))
+    (assert-true (typep (date-entered u) 'clsql-sys:wall-time) (date-entered u) :checked-date)
     (setf (date-entered u) (convert-to-clsql-datetime "7/7/1977 11:43:26.123456"))
-    (assert-true (typep (date-entered u) 'clsql-sys:wall-time) (date-entered u))
+    (assert-true (typep (date-entered u) 'clsql-sys:wall-time) (date-entered u) :checked-datetime)
     (setf (date-entered u) nil)
-    (assert-true (typep (date-entered u) 'null) (date-entered u))
-    (assert-error 'error (setf (date-entered u) "asdf"))
+    (assert-true (typep (date-entered u) 'null) (date-entered u) :checked-null)
+    (assert-error 'clsql-helper:type-coercion-error (setf (date-entered u) "asdf") :checked-error)
 
     (setf (edate u) nil)
     (assert-true (typep (edate u) 'null) (edate u))
@@ -79,7 +80,7 @@
     (assert-true (typep (edate u) 'clsql-sys:date) (edate u))
     (setf (edate u) (convert-to-clsql-datetime "7/7/1977"))
     (assert-true (typep (edate u) 'clsql-sys:date) (edate u))
-    (assert-error 'error (setf (edate u) "asdf"))
+    (assert-error 'clsql-helper:type-coercion-error (setf (edate u) "asdf"))
 
     (setf (amount u) 23)
     (assert-true (typep (amount u) 'double-float) (amount u))

@@ -6,6 +6,13 @@
 (cl-interpol:enable-interpol-syntax)
 (clsql-sys:file-enable-sql-reader-syntax)
 
+(defmacro date-equal (e g)
+  `(equalp (convert-to-clsql-datetime ,e) (convert-to-clsql-datetime ,g)))
+
+(defmacro assert-date-equal (e g &rest rest)
+  `(assert-equalp (convert-to-clsql-datetime ,e) (convert-to-clsql-datetime ,g)
+    ,@rest))
+
 (defun run-tests (&key suites tests)
   (let* ((*package* (find-package :clsql-helper-test)))
     (lisp-unit2:run-tests
@@ -223,7 +230,7 @@ B C") "newline")))
 
 
 (define-test connection-db-specs (:tags '(connections))
-  (let ((*connection-database* (clsql-helper::new-connection-database)))
+  (let ((*connection-database* (clsql-helper::new-connection-database :db nil)))
     (add-connection-spec
      :a '(("/tmp/a.db") :database-type :sqlite3))
     (add-connection-spec
@@ -241,7 +248,7 @@ B C") "newline")))
     ))
 
 (define-test connect-db-conns (:tags '(connections))
-  (let ((*connection-database* (clsql-helper::new-connection-database)))
+  (let ((*connection-database* (clsql-helper::new-connection-database :db nil)))
     (add-connection-spec :a '(("/tmp/a.db") :database-type :sqlite3))
     (add-connection-spec :b '(("/tmp/b.db") :database-type :sqlite3))
     (add-connection-spec :c '(("/tmp/c.db") :database-type :sqlite3))
@@ -261,5 +268,15 @@ B C") "newline")))
               (assert-true (in-db? :b))
               (assert-equal 3 (length
                                (clsql-helper::names->conn *connection-database*)))))))))))
+
+(define-test date-math-next-month (:tags '(dates))
+  (assert-date-equal "2/28/2015" (next-month "1/31/2015"))
+  (assert-date-equal "2/1/2015" (next-month "1/1/2015"))
+  (assert-date-equal "2/15/2015" (next-month "1/15/2015")))
+
+(define-test date-math-prev-month (:tags '(dates))
+  (assert-date-equal "2/28/2015" (last-month "3/31/2015"))
+  (assert-date-equal "2/1/2015" (last-month "3/1/2015"))
+  (assert-date-equal "2/15/2015" (last-month "3/15/2015")))
 
 

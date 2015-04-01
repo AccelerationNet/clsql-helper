@@ -289,13 +289,29 @@
   (convert-to-clsql-date! date)
   (when date (clsql:date- date +a-day+)))
 
-(defun next-month (&optional (date (clsql-helper:current-sql-date)))
+(defun next-month (&optional (date (clsql-helper:current-sql-date))
+                   &aux orig)
   (convert-to-clsql-date! date)
-  (when date (clsql-sys:date+ date +a-month+)))
+  (when date
+    (setf orig (clsql-helper:date-month date)
+          date (clsql-sys:date+ date +a-month+))
+    ;; make sure we only go one month (1/31 + 1-month = 3/3)
+    (iter (while (= (clsql-helper:date-month date)
+                    (+ 2 orig)))
+      (setf date (clsql-sys:date- date +a-day+)))
+    date))
 
-(defun last-month (&optional (date (clsql-helper:current-sql-date)))
+(defun last-month (&optional (date (clsql-helper:current-sql-date))
+                   &aux orig)
   (convert-to-clsql-date! date)
-  (when date (clsql-sys:date- date +a-month+)))
+  (when date
+    (setf
+     orig (clsql-helper:date-month date)
+     date (clsql-sys:date- date +a-month+))
+    ;; make sure we got into last month (3/31 - 1-month = 3/3)
+    (iter (while (= orig (clsql-helper:date-month date)))
+      (setf date (clsql-sys:date- date +a-day+)))
+    date))
 
 (defun first-of-next-month (&optional (date (clsql-helper:current-sql-date)))
   (convert-to-clsql-date! date)

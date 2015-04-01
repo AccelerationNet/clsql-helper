@@ -18,11 +18,12 @@
 (defun new-connection-database (&key (db *connection-database*)
                                 name new-connection)
   (make-instance 'connection-database
-                 :names->spec (names->spec db)
-                 :names->conn (if new-connection
-                                  (cons (cons name new-connection)
-                                        (names->conn db))
-                                  (names->conn db))))
+                 :names->spec (when db (names->spec db))
+                 :names->conn (when db
+                                (if new-connection
+                                    (cons (cons name new-connection)
+                                          (names->conn db))
+                                    (names->conn db)))))
 
 (defun add-connection-spec (name spec &key (db *connection-database*))
   (setf (access:access (names->spec db) name :type :alist)

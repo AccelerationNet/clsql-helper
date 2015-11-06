@@ -62,6 +62,7 @@
    #:date-diff
    #:before-day-of-month
    #:after-day-of-month
+   #:date-add
 
 
    ;; rest

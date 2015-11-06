@@ -335,3 +335,10 @@
     (if (clsql:date< d1 d2)
         days
         (- days))))
+
+(defun date-add (d dur)
+  (convert-to-clsql-date! d)
+  (when d
+    (clsql:date+ d (etypecase dur
+                     (clsql:duration dur)
+                     (integer (clsql:make-duration :day dur))))))

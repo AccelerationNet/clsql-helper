@@ -20,8 +20,12 @@
 
 (defmethod clsql-sys::filter-select-list ((o recency-mixin) (sl clsql-sys::select-list)
                                           database)
-  (declare (ignore database))
-  (push (clsql-sys::sql-expression :string #?"${ (current-timestamp-sql) } as queried")
+
+  (push (clsql-sys::sql-expression
+         :string
+         (ecase (clsql-sys:database-underlying-type database)
+           (:mssql "CURRENT_TIMESTAMP as queried")
+           (:postgresql #?"clock_timestamp() as queried")))
         (clsql-sys::select-list sl))
   (push (find '%retrieved-at (clsql-sys::class-direct-slots
                               (find-class 'recency-mixin))
@@ -44,7 +48,8 @@
      (get-history-info o)))))
 
 (defgeneric validate-recency (o &key history-info %retrieved-at)
-  (:method ((o recency-mixin) &key history-info %retrieved-at)
+  (:method ((o recency-mixin) &key history-info %retrieved-at
+            &aux (clsql-helper::*iso8601-microseconds* t))
     (let* ((history-info (or history-info
                              (get-history-info o)))
            (most-recent-historic-date
@@ -53,6 +58,9 @@
            (%ret (convert-to-clsql-datetime (or %retrieved-at (%retrieved-at o)))))
       (when (and most-recent-historic-date %ret
                  (clsql-sys::time< %ret most-recent-historic-date))
+        (adwutils:spy-break (iso8601-timestamp %ret)
+                            (iso8601-timestamp most-recent-historic-date)
+                            history-info)
         (with-simple-restart (continue "Consider the recency error handled")
           (error 'recency-error :instance o :history-info history-info))))))
 
@@ -62,6 +70,7 @@
 (defun current-timestamp-sql ()
   (case (clsql-sys:database-underlying-type clsql-sys:*default-database*)
     (:sqlite3 "STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')")
+    (:postgresql "clock_timestamp()")
     (t "CURRENT_TIMESTAMP")))
 
 (defun current-timestamp ()
@@ -71,8 +80,7 @@
               :flatp t)))))
 
 (defun %after-update-recency-check (o)
-  (setf (%retrieved-at o)
-        (current-timestamp)))
+  (setf (%retrieved-at o) (current-timestamp)))
 
 
 (defmethod clsql-sys::update-records-from-instance :before ((o recency-mixin) &key database &allow-other-keys)

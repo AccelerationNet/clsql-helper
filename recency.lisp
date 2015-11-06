@@ -58,9 +58,6 @@
            (%ret (convert-to-clsql-datetime (or %retrieved-at (%retrieved-at o)))))
       (when (and most-recent-historic-date %ret
                  (clsql-sys::time< %ret most-recent-historic-date))
-        (adwutils:spy-break (iso8601-timestamp %ret)
-                            (iso8601-timestamp most-recent-historic-date)
-                            history-info)
         (with-simple-restart (continue "Consider the recency error handled")
           (error 'recency-error :instance o :history-info history-info))))))
 

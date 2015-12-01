@@ -78,8 +78,8 @@
     (trim-and-nullify
      (typecase s
        (string s)
-       (clsql-sys:date (print-nullable-date s))
-       (clsql-sys:wall-time (print-nullable-datetime s))
+       (clsql-sys:date (iso8601-datestamp s))
+       (clsql-sys:wall-time (iso8601-timestamp s))
        (t (princ-to-string s))))))
 
 (defun db-string (s &key (prefix "")(postfix "")(wrapper "") )

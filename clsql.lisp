@@ -79,7 +79,7 @@
      (typecase s
        (string s)
        (clsql-sys:date (iso8601-datestamp s))
-       (clsql-sys:wall-time (iso8601-timestamp s))
+       (clsql-sys:wall-time (clsql::iso-timestring s))
        (t (princ-to-string s))))))
 
 (defun db-string (s &key (prefix "")(postfix "")(wrapper "") )

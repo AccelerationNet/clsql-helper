@@ -63,6 +63,10 @@
    #:before-day-of-month
    #:after-day-of-month
    #:date-add
+   #:dt<
+   #:dt<=
+   #:dt>
+   #:dt>=
 
 
    ;; rest

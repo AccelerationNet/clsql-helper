@@ -342,3 +342,15 @@
     (clsql:date+ d (etypecase dur
                      (clsql:duration dur)
                      (integer (clsql:make-duration :day dur))))))
+
+(defun dt< (&rest d)
+  (apply #'clsql:time< (mapcar #'convert-to-clsql-datetime d)))
+
+(defun dt<= (&rest d)
+  (apply #'clsql:time<= (mapcar #'convert-to-clsql-datetime d)))
+
+(defun dt> (&rest d)
+  (apply #'clsql:time> (mapcar #'convert-to-clsql-datetime d)))
+
+(defun dt>= (&rest d)
+  (apply #'clsql:time>= (mapcar #'convert-to-clsql-datetime d)))

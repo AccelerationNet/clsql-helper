@@ -46,6 +46,7 @@
    #:last-month
    #:days-in-month
    #:day-before
+   #:day-after
    #:+a-second+
    #:+a-minute+
    #:+an-hour+

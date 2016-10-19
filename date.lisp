@@ -289,6 +289,10 @@
   (convert-to-clsql-date! date)
   (when date (clsql:date- date +a-day+)))
 
+(defun day-after (&optional (date (clsql-helper:current-sql-date)))
+  (convert-to-clsql-date! date)
+  (when date (clsql:date+ date +a-day+)))
+
 (defun next-month (&optional (date (clsql-helper:current-sql-date))
                    &aux orig)
   (convert-to-clsql-date! date)

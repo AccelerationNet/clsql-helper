@@ -34,10 +34,7 @@
 
 
 (defun with-sqlite3-test-context (body)
-  (clsql-tests::test-connect-to-database
-   :sqlite3 (nth 0 (clsql-tests::db-type-spec
-                    :sqlite3
-                    (clsql-tests::read-specs))))
+  (clsql-tests::rapid-load :sqlite3)
   (unwind-protect
        (progn
          (unless (clsql-sys:table-exists-p "RecencyTestObj")

@@ -11,15 +11,25 @@
   "current date and time"
   (clsql-sys:get-time))
 
-(defun print-nullable-date (field)
+
+
+(defun print-nullable-date (field &key (in-utc? nil))
   "if the date exists, prints m?m/d?d/yyyy"
   (when field
     (typecase field
       (string field)
       (T (clsql:print-date
 	  (typecase field
-	    (clsql-sys:date (clsql-sys::date->time field))
-	    (clsql-sys:wall-time field))
+	    (clsql-sys:date
+             (funcall (if in-utc?
+                          #'clsql-sys:time-to-utc
+                          #'clsql-sys:time-to-localtime)
+                      (clsql-sys::date->time field)))
+	    (clsql-sys:wall-time
+             (funcall (if in-utc?
+                          #'clsql-sys:time-to-utc
+                          #'clsql-sys:time-to-localtime)
+                      field)))
 	  :day)))))
 
 (defmethod print-object ((o clsql-sys:date) stream)
@@ -74,28 +84,38 @@
         (m (month-string d)))
     (when (and d m) #?"${m} ${d}")))
 
-(defun print-nullable-datetime (field)
+(defun print-nullable-datetime (field &key (in-utc? nil))
   "if the date exists, prints mm/dd/yyyy hh:mm:ss"
   (let ((*print-pretty* nil))
     (when field
       (typecase field
 	(string field)
 	(T (multiple-value-bind (usec second minute hour day month year)
-	       (clsql-sys:decode-time (convert-to-clsql-datetime field))
+	       (clsql-sys:decode-time
+                (funcall (if in-utc?
+                             #'clsql-sys:time-to-utc
+                             #'clsql-sys:time-to-localtime)
+                 (convert-to-clsql-datetime field)))
 	     (declare (ignore usec))
 	     (format nil "~2,'0d/~2,'0d/~4,'0d ~2,'0d:~2,'0d:~2,'0d"
                      month day year hour minute second)))))))
 
-(defun print-timestamp (field)
+(defun print-timestamp (field &key (in-utc? nil))
   "if the date exists, prints yyyy-mm-dd hh:mm:ss.uuuuuu"
   (let ((*print-pretty* nil))
     (when field
       (typecase field
 	(string field)
-	(T (multiple-value-bind (usec second minute hour day month year)
-	       (clsql-sys:decode-time (convert-to-clsql-datetime field))
-	     (format nil "~4,'0d-~2,'0d-~2,'0d ~2,'0d:~2,'0d:~2,'0d.~3,'0d"
-                     year month day hour minute second (floor usec 1000))))))))
+	(T (multiple-value-bind (usec second minute hour day month year is-utc?)
+	       (clsql-sys:decode-time
+                (funcall (if in-utc?
+                             #'clsql-sys:time-to-utc
+                             #'clsql-sys:time-to-localtime)
+                         (convert-to-clsql-datetime field)))
+	     (format nil "~4,'0d-~2,'0d-~2,'0d ~2,'0d:~2,'0d:~2,'0d.~3,'0d~a"
+                     year month day hour minute second (floor usec 1000)
+                     (if is-utc? "Z" "")
+                     )))))))
 
 (defmethod print-object ((o clsql:wall-time) stream)
   (let ((date (print-nullable-datetime o)))

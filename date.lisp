@@ -33,7 +33,7 @@
 	  :day)))))
 
 (defmethod print-object ((o clsql-sys:date) stream)
-  (let ((date (print-nullable-date o)))
+  (let ((date (clsql-sys::iso-datestring o)))
     (if *print-escape*
 	(print-unreadable-object (o stream :type T :identity T)
 	  (format stream "~A" date))
@@ -118,7 +118,7 @@
                      )))))))
 
 (defmethod print-object ((o clsql:wall-time) stream)
-  (let ((date (print-nullable-datetime o)))
+  (let ((date (clsql-sys:iso-timestring o)))
     (if *print-escape*
 	(print-unreadable-object (o stream :type T :identity T)
 		  (format stream "~A" date))
@@ -133,7 +133,7 @@
 	     (clsql-sys:date (clsql-sys::date->time x))
 	     (string (convert-to-clsql-datetime x))
 	     (T x))))
-    (equalp (cast x) (cast y))))
+    (clsql-sys:time= (cast x) (cast y))))
 
 (defvar *iso8601-timezone* nil)
 (defvar *iso8601-microseconds* nil)
@@ -164,7 +164,8 @@
   (:method (d)
     (typecase d
       ((or clsql-sys:wall-time clsql-sys:date string integer)
-       (multiple-value-bind (usec second minute hour day month year)
+       (multiple-value-bind (usec second minute hour
+                             day month year is-utc?)
            (clsql-sys:decode-time (convert-to-clsql-datetime d))
          ;; oh yeah, we love recursive format processing
          ;; http://www.lispworks.com/documentation/HyperSpec/Body/22_cgf.htm
@@ -181,7 +182,9 @@
                (list ".~6,'0D" (list usec))
                (list "" ()))
            (cond
-             ((eql *iso8601-timezone* T) (list "~A" (list 'Z)))
+             ((or is-utc?
+                  (eql *iso8601-timezone* T))
+              (list "~A" (list 'Z)))
              ((stringp *iso8601-timezone*) (list "~A" (list *iso8601-timezone*)))
              (T (list "" ())))))))
       (null nil))))
@@ -193,11 +196,37 @@
    #?r"^(?:'|\")?(\d{1,2})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{2,4})(?:\s*(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?(?:\.(\d+))?\s*((?:a|p)m\.?)?)?(?:'|\")?"
    :case-insensitive-mode t))
 
+(defparameter +iso-date-match+
+  #?r"(\d{2,4})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{1,2})")
+
+(defparameter +iso-tz-match+
+  #?r"(Z|,,0|[\+\-]\d{1,2}(?::\d{2})?)")
+
+(defparameter +iso-time-match+
+   #?r"(?:(\d{1,2})(?:${
+ +date-sep+ }(\d{1,2})(?:${
+ +date-sep+ }(\d{1,2})(?:\.(\d+))?))?\s*([ap]m\.?)?${
+ +iso-tz-match+ }?)")
+
 (defparameter +iso-8601-ish-regex-string+
-  #?r"^(?:'|\")?(\d{2,4})${ +date-sep+ }(\d{1,2})${ +date-sep+ }(\d{1,2})(?:(?:\s*|T)(\d{1,2})${ +date-sep+ }(\d{1,2})(?:${ +date-sep+ }(\d{1,2}))?(?:\.(\d+))?\s*((?:a|p)m\.?)?(?:Z|,,0|(?:-|\+)\d{1,2}:?\d{2}?)?)?(?:'|\")?")
+  #?r"^(?:'|\"|\s+)?${ +iso-date-match+
+    }(?:(?:\s+|T)${+iso-time-match+})?(?:'|\"|\s+)?")
 
 (defparameter +iso-8601-ish-regex+
   (cl-ppcre:create-scanner +iso-8601-ish-regex-string+ :case-insensitive-mode t))
+
+(defun isoish-offset-to-seconds (offset)
+  (unless (and offset (plusp (length offset)))
+    (return-from isoish-offset-to-seconds nil))
+  (when (cl-ppcre:scan #?r"^[\s,0zZ\.]+$" offset)
+    (return-from isoish-offset-to-seconds 0))
+  (cl-ppcre:register-groups-bind
+      (pos (#'parse-integer h m))
+      (#?r"(\+|-)(\d{1,2})(?::(\d{2}))?" offset)
+    (* (+ (* (or h 0) 60 )
+          (or m 0))
+       60
+       (if (string= pos "+") -1 1))))
 
 (defgeneric convert-to-clsql-datetime (val)
   (:documentation
@@ -209,22 +238,26 @@
     (macrolet ((regex-date-to-clsql-date ()
                  "Pretty fugly variable capture, but what are you gonna do.
                 I have the exact same code twice with like 6 vars to pass"
-                 `(let ((hour (if (and h (< h 12)
-                                       (string-equal am/pm "PM"))
-                                  (+ 12 h)
-                                  h))
-                        (year (and y
-                               (cond
-                                 ((< y 50) (+ y 2000))
-                                 ((< y 100) (+ y 1900))
-                                 (T y))))
-                        (usec (when usec
-                                (* (parse-integer usec)
-                                   (expt 10 (- 6 (length usec)))))))
-                   (clsql:make-time
-                    :year year :month mon :day d
-                    :hour (or hour 0) :minute (or m 0) :second (or s 0)
-                    :usec (or usec 0)))))
+                 `(let* ((offset (isoish-offset-to-seconds tz))
+                         (hour (if (and h (< h 12)
+                                        (string-equal am/pm "PM"))
+                                   (+ 12 h)
+                                   h))
+                         (year (and y
+                                (cond
+                                  ((< y 50) (+ y 2000))
+                                  ((< y 100) (+ y 1900))
+                                  (T y))))
+                         (usec (when usec
+                                 (* (parse-integer usec)
+                                    (expt 10 (- 6 (length usec))))))
+                         (time (clsql:make-time
+                                :year year :month mon :day d
+                                :hour (or hour 0) :minute (or m 0) :second (or s 0)
+                                :offset offset
+                                :usec (or usec 0))))
+                   time
+                   )))
       (typecase val
         (clsql:date (clsql-sys::date->time val))
         (clsql:wall-time val)
@@ -234,11 +267,11 @@
              ;(ignore-errors (clsql-sys:parse-date-time val))
 	     ;(ignore-errors (clsql-sys:parse-timestring val))
 	     (cl-ppcre:register-groups-bind
-                 ((#'parse-integer mon d y h m s ) usec am/pm)
+                 ((#'parse-integer mon d y h m s ) usec am/pm tz)
 		 (+date-time-regex+ val)
 	       (regex-date-to-clsql-date))
 	     (cl-ppcre:register-groups-bind
-                 ((#'parse-integer y mon d h m s) usec am/pm)
+                 ((#'parse-integer y mon d h m s) usec am/pm tz)
 		 (+iso-8601-ish-regex+ val)
 	       (regex-date-to-clsql-date)
 	       )))))))

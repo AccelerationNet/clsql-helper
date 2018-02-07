@@ -135,10 +135,12 @@
 	     (T x))))
     (setf x (cast x)
           y (cast y))
-    (or (eql x y)
+    (or (eql x y) ;; reference equality
+        ;; wall time equality
         (and (typep x 'clsql:wall-time)
              (typep x 'clsql:wall-time)
              (clsql-sys:time= x y))
+        ;; hey maybe they match?
         (equalp x y))))
 
 (defvar *iso8601-timezone* nil)
@@ -223,7 +225,7 @@
         (list (mapcar #'%to-int it))
         (null 0)
         (integer it)
-        (string (parse-integer it)))
+        (string (ignore-errors (parse-integer it))))
       0))
 
 (defun %convert-offset (str &aux (c0 (char str 0)))

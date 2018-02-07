@@ -21,11 +21,7 @@
 (defmethod clsql-sys::filter-select-list ((o recency-mixin) (sl clsql-sys::select-list)
                                           database)
 
-  (push (clsql-sys::sql-expression
-         :string
-         (ecase (clsql-sys:database-underlying-type database)
-           (:mssql "CURRENT_TIMESTAMP as queried")
-           (:postgresql #?"clock_timestamp() as queried")))
+  (push (clsql-sys::sql-expression :string #?"${(current-timestamp-sql)} queried")
         (clsql-sys::select-list sl))
   (push (find '%retrieved-at (clsql-sys::class-direct-slots
                               (find-class 'recency-mixin))

@@ -59,7 +59,8 @@
                      (access:class-slot-definitions o2)
                      :key #'closer-mop:slot-definition-name)))
     (for s in slots)
-    (for reader = (or (first (closer-mop:slot-definition-readers s))
+    (for reader = (or (ignore-errors
+                       (first (closer-mop:slot-definition-readers s)))
                       (closer-mop:slot-definition-name s)))
     (for name = (closer-mop:slot-definition-name s))
     ;; skip join slots for db stuff

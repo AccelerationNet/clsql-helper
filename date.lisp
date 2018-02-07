@@ -133,7 +133,11 @@
 	     (clsql-sys:date (clsql-sys::date->time x))
 	     (string (convert-to-clsql-datetime x))
 	     (T x))))
-    (clsql-sys:time= (cast x) (cast y))))
+    (setf x (cast x) y (cast y))
+    (or (eql x y)
+        (and (typep x 'clsql:wall-time)
+             (typep y 'clsql:wall-time)
+             (clsql-sys:time= x y)))))
 
 (defvar *iso8601-timezone* nil)
 (defvar *iso8601-microseconds* nil)
@@ -217,7 +221,7 @@
         (list (mapcar #'%to-int it))
         (null 0)
         (integer it)
-        (string (parse-integer it)))
+        (string (ignore-errors (parse-integer it))))
       0))
 
 (defun %convert-string-split

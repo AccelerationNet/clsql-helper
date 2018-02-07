@@ -133,7 +133,13 @@
 	     (clsql-sys:date (clsql-sys::date->time x))
 	     (string (convert-to-clsql-datetime x))
 	     (T x))))
-    (clsql-sys:time= (cast x) (cast y))))
+    (setf x (cast x)
+          y (cast y))
+    (or (eql x y)
+        (and (typep x 'clsql:wall-time)
+             (typep x 'clsql:wall-time)
+             (clsql-sys:time= x y))
+        (equalp x y))))
 
 (defvar *iso8601-timezone* nil)
 (defvar *iso8601-microseconds* nil)
@@ -220,6 +226,19 @@
         (string (parse-integer it)))
       0))
 
+(defun %convert-offset (str &aux (c0 (char str 0)))
+  (when (string-equal str ",,0")
+    (return-from %convert-offset nil))
+  (when (string-equal str "z")
+    (return-from %convert-offset 0))
+  (destructuring-bind (pos? hours &optional min)
+      (list* (char= c0 #\+) (cl-ppcre:split ":" (subseq str 1)))
+    (setf hours (ignore-errors (parse-integer hours))
+          min (ignore-errors (parse-integer min)))
+    (* (+ (* 60 60 (or hours 0))
+          (* 60 (or min 0)))
+       (if pos? -1 1))))
+
 (defun %convert-string-split
     (val &aux year month day hour minute second usec offset)
   (setf val (string-trim (list* #\' #\" +common-white-space-trimbag+)
@@ -253,12 +272,9 @@
     (setf offset 0))
 
   (cl-ppcre:register-groups-bind
-      ((#'(lambda (offset-sec)
-            (clsql-sys::%parse-offset-string offset-sec val))
-          offset-sec))
-      (#?"([\+\-]\d{1,2}(?::\d{2})?)" val)
-    (setf offset offset-sec))
-
+   (offset-str)
+   (#?r"([\+\-]\d{1,2}(?::\d{2})?)$" (trim-whitespace val))
+   (setf offset (%convert-offset offset-str)))
   (let* ((am/pm? (cl-ppcre:scan-to-strings #?r"[ap]m.?" (string-downcase val)))
          (is-am? (when am/pm?
                    (char= (char am/pm? 0) #\a)))

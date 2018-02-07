@@ -253,7 +253,9 @@
     (setf offset 0))
 
   (cl-ppcre:register-groups-bind
-      ((#'clsql-sys::%parse-offset-string offset-sec))
+      ((#'(lambda (offset-sec)
+            (clsql-sys::%parse-offset-string offset-sec val))
+          offset-sec))
       (#?"([\+\-]\d{1,2}(?::\d{2})?)" val)
     (setf offset offset-sec))
 

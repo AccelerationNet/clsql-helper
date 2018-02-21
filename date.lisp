@@ -257,9 +257,9 @@
     (setf year (%to-int y)
           month (%to-int mon)
           day (%to-int d)
-          hour (%to-int h)
-          minute (%to-int m)
-          second (%to-int s))
+          hour (or (%to-int h) 0)
+          minute (or (%to-int m) 0)
+          second (or (%to-int s) 0))
 
     (unless (and year month day)
       (return-from %convert-string-split nil))
@@ -278,7 +278,7 @@
 
   (cl-ppcre:register-groups-bind
    (offset-str)
-   (#?r"([\+\-]\d{1,2}(?::\d{2})?)$" (trim-whitespace val))
+   (#?r"(?::\d\d|\s)+([\+\-]\d{1,2}(?::\d{2})?)$" (trim-whitespace val))
    (setf offset (%convert-offset offset-str)))
   (let* ((am/pm? (cl-ppcre:scan-to-strings #?r"[ap]m.?" (string-downcase val)))
          (is-am? (when am/pm?
@@ -289,7 +289,6 @@
       (setf hour 0))
     (when (and (not (eql hour 12)) is-pm?)
       (incf hour 12)))
-
   (clsql:make-time
    :year year :month month :day day
    :hour hour :minute minute :second second

@@ -10,7 +10,7 @@
 (defsystem :clsql-helper
   :description "A library providing a clutch of utilities to make working with clsql easier"
   :licence "BSD"
-  :version "0.1"
+  :version "1.0.1"
   :serial T
   :components ((:file "package")
                (:file "utils")
@@ -27,11 +27,11 @@
                 :cl-interpol :symbol-munger :alexandria
                 :md5 :access :collectors))
 
-(defsystem :clsql-helper-test
+(defsystem :clsql-helper/test
   :description "Tests for a library providing a clutch of utilities to make
      working with clsql easier"
   :licence "BSD"
-  :version "0.1"
+  :version "1.0.1"
   :components ((:module :tests
 			:serial t
 			:components ((:file "clsql")
@@ -40,7 +40,7 @@
   :depends-on (:clsql-helper :lisp-unit2 :clsql-tests))
 
 (defmethod asdf:perform ((o asdf:test-op) (c (eql (find-system :clsql-helper))))
-  (asdf:load-system :clsql-helper-test)
+  (asdf:load-system :clsql-helper/test)
 
   ;; this is just so we can test stuff that requires a db connection
   ;; not really a big deal if it fails, we will just skip a couple of tests

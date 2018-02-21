@@ -221,12 +221,12 @@
        (if (string= pos "+") -1 1))))
 
 (defun %to-int (it)
-  (or (typecase it
-        (list (mapcar #'%to-int it))
-        (null 0)
-        (integer it)
-        (string (ignore-errors (parse-integer it))))
-      0))
+  (typecase it
+    (list (mapcar #'%to-int it))
+    (null 0)
+    (integer it)
+    (string (ignore-errors (parse-integer it)))
+    (t 0)))
 
 (defun %convert-offset (str &aux (c0 (char str 0)))
   (when (string-equal str ",,0")
@@ -260,6 +260,9 @@
           hour (%to-int h)
           minute (%to-int m)
           second (%to-int s))
+
+    (unless (and year month day)
+      (return-from %convert-string-split nil))
 
     (when (and (<= year 31) (> day 31))
       (multiple-value-setq (month day year)

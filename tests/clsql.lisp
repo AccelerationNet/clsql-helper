@@ -64,6 +64,7 @@
             ("'2012-05-01T12:56:17'"
 	     "05/01/2012 12:56:17" "5/1/2012" "2012-05-01" "2012-05-01 12:56:17")
             ("432" nil)
+            ("this is not a date" nil)
             )))
     (iter (for (d c-time c-date c-iso-date c-iso-time) in dates)
       (for dt = (convert-to-clsql-datetime d))

@@ -221,12 +221,11 @@
        (if (string= pos "+") -1 1))))
 
 (defun %to-int (it)
-  (or (typecase it
-        (list (mapcar #'%to-int it))
-        (null 0)
-        (integer it)
-        (string (ignore-errors (parse-integer it))))
-      0))
+  (typecase it
+    (list (mapcar #'%to-int it))
+    (null 0)
+    (integer it)
+    (string (ignore-errors (parse-integer it)))))
 
 (defun %convert-offset (str &aux (c0 (char str 0)))
   (when (string-equal str ",,0")
@@ -257,9 +256,12 @@
     (setf year (%to-int y)
           month (%to-int mon)
           day (%to-int d)
-          hour (%to-int h)
-          minute (%to-int m)
-          second (%to-int s))
+          hour (or (%to-int h) 0)
+          minute (or (%to-int m) 0)
+          second (or (%to-int s) 0))
+
+    (unless (and year month day)
+      (return-from %convert-string-split nil))
 
     (when (and (<= year 31) (> day 31))
       (multiple-value-setq (month day year)
@@ -275,7 +277,7 @@
 
   (cl-ppcre:register-groups-bind
    (offset-str)
-   (#?r"([\+\-]\d{1,2}(?::\d{2})?)$" (trim-whitespace val))
+   (#?r"((?:\s|:\d\d)[\+\-]\d{1,2}(?::\d{2})?)$" (trim-whitespace val))
    (setf offset (%convert-offset offset-str)))
   (let* ((am/pm? (cl-ppcre:scan-to-strings #?r"[ap]m.?" (string-downcase val)))
          (is-am? (when am/pm?

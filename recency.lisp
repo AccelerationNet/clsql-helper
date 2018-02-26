@@ -21,9 +21,14 @@
 (defmethod clsql-sys::filter-select-list ((o recency-mixin) (sl clsql-sys::select-list)
                                           database)
 
-  (push (clsql-sys::sql-expression :string #?"${(current-timestamp-sql)} queried")
+  (push (clsql-sys::sql-expression
+         :string
+         (ecase (clsql-sys:database-underlying-type database)
+           (:mssql "CURRENT_TIMESTAMP as queried")
+           (:postgresql #?"clock_timestamp() as queried")))
         (clsql-sys::select-list sl))
-  (push (find '%retrieved-at (clsql-sys::class-direct-slots (find-class 'recency-mixin))
+  (push (find '%retrieved-at (clsql-sys::class-direct-slots
+                              (find-class 'recency-mixin))
               :key #'clsql-sys::slot-definition-name)
         (clsql-sys::slot-list sl)))
 
@@ -62,13 +67,14 @@
 (defun current-timestamp-sql ()
   (case (clsql-sys:database-underlying-type clsql-sys:*default-database*)
     (:sqlite3 "STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')")
-    (:postgresql "clock_timestamp()::timestamptz")
+    (:postgresql "clock_timestamp()")
     (t "CURRENT_TIMESTAMP")))
 
 (defun current-timestamp ()
   (with-a-database ()
     (convert-to-clsql-datetime
-     (first (clsql:query #?"SELECT ${ (current-timestamp-sql) }" :flatp t)))))
+     (first (clsql:query #?"SELECT ${ (current-timestamp-sql) }"
+              :flatp t)))))
 
 (defun %after-update-recency-check (o)
   (setf (%retrieved-at o) (current-timestamp)))

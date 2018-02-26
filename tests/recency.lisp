@@ -16,37 +16,38 @@
     :accessor datemodified :initarg :datemodified
     :initform (current-timestamp)
     :type clsql-sys:wall-time))
-  (:base-table "recency_test_obj")
+  (:base-table "RecencyTestObj")
   (:default-initargs :%history-select-fn 'recency-test-history-fn))
 
 (defmethod recency-test-history-fn ((o recency-test-obj))
-  (when (integerp (id o))
+  (when (id o)
     (convert-to-clsql-datetime
      (first
       (clsql-helper:db-select
-          [datemodified]
-          :from [recency_test_obj]
-          :where [= [id] (id o)])))))
+       [datemodified]
+       :from [recencytestobj]
+       :where [= [id] (id o)])))))
 
-(defmethod clsql-sys:update-records-from-instance
-    :before ((o recency-test-obj) &key &allow-other-keys)
+(defmethod clsql-sys:update-records-from-instance :before ((o recency-test-obj) &key &allow-other-keys)
   (setf (datemodified o) (current-timestamp)))
 
 
 
-(defun with-postgresql-test-context (body)
-  (clsql-tests::rapid-load :postgresql-socket3)  
-    (unwind-protect
-         (progn
-           (when (clsql-sys:table-exists-p "recency_test_obj")
-             (clsql-sys:drop-table "recency_test_obj"))
-           (clsql-sys:create-view-from-class 'recency-test-obj)
-           (funcall body))
-      (when clsql-sys::*default-database*
-        (clsql-sys::disconnect :database clsql-sys::*default-database*))))
+(defun with-sqlite3-test-context (body)
+  (clsql-tests::test-connect-to-database
+   :sqlite3 (nth 0 (clsql-tests::db-type-spec
+                    :sqlite3
+                    (clsql-tests::read-specs))))
+  (unwind-protect
+       (progn
+         (unless (clsql-sys:table-exists-p "RecencyTestObj")
+           (clsql-sys:create-view-from-class 'recency-test-obj))
+         (funcall body))
+    (when clsql-sys::*default-database*
+      (clsql-sys::disconnect :database clsql-sys::*default-database*))))
 
 (lisp-unit2:define-test test-recency-checks (:tags '(recency diff merge)
-                                             :contexts 'with-postgresql-test-context)
+                                             :contexts 'with-sqlite3-test-context)
   (let ((a (make-instance 'recency-test-obj
                           :name "A-Russ"
                           :date (convert-to-clsql-datetime "12/1/2000")
@@ -55,7 +56,7 @@
     (let* ((b (first (clsql-helper:db-select 'recency-test-obj :where [= [id] (id a)]))))
       (setf (value a) 2)
       (setf (value b) 3 (name b) "B-Russ")
-      (sleep .1)
+      (sleep .1);; just give us a millisec or 100
       (lisp-unit2:assert-no-error
        'clsql-helper:recency-error
        (clsql-sys:update-records-from-instance a)
@@ -77,7 +78,7 @@
       )))
 
 (lisp-unit2:define-test test-merge (:tags '(recency diff merge)
-                                    :contexts 'with-postgresql-test-context)
+                                    :contexts 'with-sqlite3-test-context)
   (let ((a (make-instance 'recency-test-obj
                           :name "Russ"
                           :date (convert-to-clsql-datetime "12/1/2000")
@@ -106,21 +107,21 @@
       )))
 
 (lisp-unit2:define-test test-automerging-save (:tags '(recency diff merge)
-                                               :contexts 'with-postgresql-test-context)
+                                               :contexts 'with-sqlite3-test-context)
   (let ((a (make-instance 'recency-test-obj
                           :name "Russ"
                           :date (convert-to-clsql-datetime "12/1/2000")
                           :value 1)))
     (clsql-helper:save! a)
-    (sleep .25)
+    (sleep .1)
     (let* ((b (first (clsql-helper:db-select 'recency-test-obj :where [= [id] (id a)])))
            (original (copy-instance b)))
       (setf (value a) 2)
       (setf (value b) 3
             (name b) "B-Russ")
-      (sleep .25)      
+      (sleep .1)      
       (save! a)
-      (sleep .25)
+      (sleep .1)
       (let ((handled?
               (block handled
                 (handler-bind

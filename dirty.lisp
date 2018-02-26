@@ -78,12 +78,6 @@
             (always res)
             (thereis res))))))
 
-(defmethod clsql-sys::get-slot-values-from-view :after
-    ((o dirty-db-slots-mixin) slotdefs vals)
-  "This setfs slot values from the database values during select, so it makes sense to reset after
-   ward"
-  (reset-dirty o))
-
 (defmethod clsql-sys::update-slot-from-db-value :around ((o dirty-db-slots-mixin) slot value)
   " disable dirty slot recording if the value is from the database "
   (let ( *record-this-dirty-slot* )
@@ -96,6 +90,18 @@
 
 (defmethod clsql-sys:update-instance-from-records :after
     ((o dirty-db-slots-mixin) &key &allow-other-keys)
+  "If we just reloaded, we must not be dirty anymore"
+  (reset-dirty o))
+
+(defmethod clsql-sys:update-records-from-instance :after
+    ((o dirty-db-slots-mixin) &key &allow-other-keys)
+  "If we just saved, we must not be dirty anymore"
+  (reset-dirty o))
+
+(defmethod clsql-sys::get-slot-values-from-view :after
+    ((o dirty-db-slots-mixin) slotdefs vals)
+  "If we just reloaded, we must not be dirty anymore
+   TODO: should this pay attention to *what* slots were gotten and only reset them?"
   (reset-dirty o))
 
 (defmethod (setf closer-mop:slot-value-using-class) :before

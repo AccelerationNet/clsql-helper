@@ -11,6 +11,10 @@
    #:find-dirty-test
    #:dirty-slots-mixin
    #:dirty-db-slots-mixin
+   #:slot-name
+   #:old-value
+   #:new-value
+   #:dirty-slot
 
    ;; recency
    #:recency-error

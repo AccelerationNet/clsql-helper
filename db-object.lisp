@@ -30,39 +30,6 @@
       (number new-id)
       (string (parse-integer new-id :junk-allowed T)))))
 
-(defmethod fill-identifier! (obj &key database
-                             &aux (key-slots (clsql-sys::key-slots (class-of obj))))
-  "fill the id field on the object with the appropriate next-identifier"
-  ;; TODO: this interacts weirdly with the dirty bits stuff (eg: no dirty
-  ;; slots means we might not actually insert), which means we could get a
-  ;; messed up id.  It also seems like this could just interact with the
-  ;; "standard" clsql stuff for this
-
-  ;; TODO: Remove this when new clsql is in quicklisp, the default
-  ;; implementation should handle this now
-  (when (= 1 (length key-slots))
-    (let ((key-slot-name (c2mop:slot-definition-name
-                          (first key-slots))))
-      (unless (and (slot-boundp obj key-slot-name)
-                   (slot-value obj key-slot-name))
-        (let ((nid (next-identifier obj :database database)))
-          (setf (slot-value obj key-slot-name) nid))))))
-
-;;;; We add an after to both primary ways of saving a db-object to the
-;;;; database they call a common function underneath, but its privatish and it
-;;;; didnt seem bad to just work with the public interface These dont call
-;;;; each other as might be expected do to normalized classes
-
-(defmethod clsql-sys:update-records-from-instance :after
-    ((obj  db-object) &key clsql-sys:database)
-  "After effecting the database record, if the key-slot is empty then use
-SCOPE_IDENTITY to fill it. If > 1 key-slot, this won't do anything."
-  (fill-identifier! obj :database clsql-sys:database))
-
-(defmethod clsql:update-record-from-slots :after ((obj db-object) slots &key clsql:database)
-  "After effecting the database record, fill the identifier field"
-  (fill-identifier! obj :database clsql-sys:database))
-
 (defmethod (setf closer-mop:slot-value-using-class) :after
     (new
      (class clsql-sys::standard-db-class)

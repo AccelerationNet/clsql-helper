@@ -83,11 +83,6 @@
   (let ( *record-this-dirty-slot* )
     (call-next-method)))
 
-(defmethod fill-identifier! :around ((o dirty-db-slots-mixin) &key database)
-  (declare (ignore o database))
-  (let ( *record-this-dirty-slot* )
-    (call-next-method)))
-
 (defmethod clsql-sys:update-instance-from-records :after
     ((o dirty-db-slots-mixin) &key &allow-other-keys)
   "If we just reloaded, we must not be dirty anymore"
@@ -123,32 +118,23 @@
        (format *error-output* "~%warning skipping method definition: ~%~A~%" c)
        ))))
 
-(defmethod-when-possible clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin))
-  ;; todo: broken for update-instance-from-record and to be removed when clsql catches up
-  (let ((classes-and-slots (call-next-method)))
-    (iter (for class-and-slots in classes-and-slots)
-      (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
-                    (when (slot-dirty? object slot-def)
-                      (collect slot-def))))
-      (when defs
-        (setf (clsql-sys::slot-defs class-and-slots) defs)
-        (collect class-and-slots)))))
 
-(defmethod-when-possible clsql-sys::view-classes-and-storable-slots ((object dirty-db-slots-mixin)
-                                                                     &key to-database-p)
+(defmethod clsql-sys::view-classes-and-storable-slots
+    ((object dirty-db-slots-mixin)
+     &key to-database-p)
   (let ((classes-and-slots (call-next-method)))
-    (if (null to-database-p)
+    (if (or (null to-database-p) (null (primary-key-value object)))
         classes-and-slots
         ;; filter for only dirty slots on updating db
         (iter (for class-and-slots in classes-and-slots)
-          (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
-                        (when (and (member (clsql-sys::view-class-slot-db-kind slot-def)
-                                           '(:key :base))
-                                   (slot-dirty? object slot-def))
-                          (collect slot-def))))
-          (when defs
-            (setf (clsql-sys::slot-defs class-and-slots) defs)
-            (collect class-and-slots))))))
+              (for defs = (iter (for slot-def in (clsql-sys::slot-defs class-and-slots))
+                                (when (and (member (clsql-sys::view-class-slot-db-kind slot-def)
+                                                   '(:key :base))
+                                           (slot-dirty? object slot-def))
+                                  (collect slot-def))))
+              (when defs
+                (setf (clsql-sys::slot-defs class-and-slots) defs)
+                (collect class-and-slots))))))
 
 #| reimplementation for normal classes (different metaclass)
 

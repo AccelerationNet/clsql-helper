@@ -632,3 +632,11 @@
   (:method (db-obj &key &allow-other-keys)
     (clsql-sys:update-records-from-instance db-obj)
     db-obj))
+
+(defun %with-sql-output (body-fn)
+  (with-output-to-string (strstr)
+    (let* ((clsql-sys::*sql-stream* (make-broadcast-stream clsql-sys::*sql-stream* strstr)))
+      (funcall body-fn))))
+
+(defmacro sql-output-of (()&body body)
+  `(%with-sql-output (lambda () ,@body)))

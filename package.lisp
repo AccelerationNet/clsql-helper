@@ -151,6 +151,8 @@
    #:pg-db-object
    #:mssql-db-object
    #:sqlite3-db-object
+
+   #:sql-output-of
    ))
 
 ;; Put clsql into the features list so that we can

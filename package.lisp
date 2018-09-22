@@ -48,6 +48,8 @@
    #:first-of-next-month
    #:next-month
    #:last-month
+   #:next-year
+   #:last-year
    #:days-in-month
    #:day-before
    #:day-after

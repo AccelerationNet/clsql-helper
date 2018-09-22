@@ -403,6 +403,30 @@
       (setf date (clsql-sys:date- date +a-day+)))
     date))
 
+(defun next-year (&optional (date (clsql-helper:current-sql-date))
+                   &aux orig)
+  (convert-to-clsql-date! date)
+  (when date
+    (setf
+     orig (clsql-helper:date-month date)
+     date (clsql-sys:date- date +a-month+))
+    ;; make sure we got into last month (3/31 - 1-month = 3/3)
+    (iter (while (= orig (clsql-helper:date-month date)))
+      (setf date (clsql-sys:date+ date +a-year+)))
+    date))
+
+(defun last-year (&optional (date (clsql-helper:current-sql-date))
+                   &aux orig)
+  (convert-to-clsql-date! date)
+  (when date
+    (setf
+     orig (clsql-helper:date-month date)
+     date (clsql-sys:date- date +a-month+))
+    ;; make sure we got into last month (3/31 - 1-month = 3/3)
+    (iter (while (= orig (clsql-helper:date-month date)))
+      (setf date (clsql-sys:date- date +a-year+)))
+    date))
+
 (defun first-of-next-month (&optional (date (clsql-helper:current-sql-date)))
   (convert-to-clsql-date! date)
   (next-month (first-of-the-month date)))
